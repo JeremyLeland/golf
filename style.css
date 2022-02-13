@@ -1,0 +1,10 @@
+body {
+  margin: 0;
+  overscroll-behavior: none; /* Disable Chrome two fingers back/forward swipe */
+  user-select: none;  /* Prevent accidental selection while dragging mouse */
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+}
