@@ -1,0 +1,28 @@
+<link rel='stylesheet' href='../style.css'>
+
+<body></body>
+
+<script type='module'>
+  import { Game } from '../src/Game.js';
+  import { Level } from '../src/Level.js';
+  import { World } from '../src/World.js';
+  import { Ball } from '../src/Ball.js';
+
+  const ball = new Ball( 0, 0 );
+  const level = new Level();
+  const world = new World();
+
+  const game = new Game();
+
+  game.scrollX = 300;
+
+  game.update = ( dt ) => {
+    // world.update( dt );
+  };
+
+  game.draw = ( ctx ) => {
+    ball.draw( ctx );
+    level.draw( ctx );
+  };
+
+</script>
