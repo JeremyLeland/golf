@@ -43,7 +43,9 @@ export class Wall {
       return {
         time: hitTime,
         normal: this.normal,
-        entities: [ this, entity ],
+        x: hitX,
+        y: hitY,
+        entities: [ entity, this ],
       };
     }
 
@@ -104,7 +106,9 @@ function getPointHit( entity, cx, cy ) {
     return {
       time: hitTime,
       normal: { x: nx, y: ny },
-      entities: [ this, entity ],
+      x: hitX,
+      y: hitY,
+      entities: [ entity, this ],
     }
   }
   else {
