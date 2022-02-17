@@ -1,0 +1,82 @@
+<link rel="stylesheet" href="../style.css">
+
+<body>
+</body>
+
+<script type="module">
+
+  import { Game } from '../src/Game.js';
+  import { Ball } from '../src/Ball.js';
+  import { Wall } from '../src/Wall.js';
+  import { World } from '../src/World.js';
+
+  const walls = [
+    new Wall(  50,   0,  50, 150 ),
+    new Wall(  50, 150, 100, 100 ),
+    new Wall( 100, 100, 200, 150 ),
+    new Wall( 200, 150, 400, 100 ),
+  ];
+
+  let ballX = 120, ballY = 50;
+  const ball = new Ball();
+  const world = new World();
+
+  const game = new Game();
+  game.update = ( dt ) => {
+    if ( game.mouseDown ) {
+      ballX = game.mouseX;
+      ballY = game.mouseY;
+    }
+  };
+
+  game.draw = ( ctx ) => {
+    walls.forEach( w => w.draw( ctx ) );
+
+    let dt = 10;
+    
+    ball.x = ballX;
+    ball.y = ballY;
+    ball.dx = ( game.mouseX - ball.x ) / dt;
+    ball.dy = ( game.mouseY - ball.y ) / dt;
+    
+    ball.fillStyle = 'white';
+    ball.draw( ctx );
+
+    for ( let tries = 0, lastHit; dt > 0 && tries < 10; tries ++ ) {   // don't get stuck forever
+      ctx.beginPath();
+      ctx.moveTo( ball.x, ball.y );
+      ctx.lineTo( ball.x + ball.dx * dt, ball.y + ball.dy * dt );
+      ctx.strokeStyle = 'yellow';
+      ctx.stroke();
+
+      const hit = world.getNextHit( ball, walls, lastHit );
+      ctx.beginPath();
+      ctx.moveTo( ball.x, ball.y );
+      ctx.lineTo( hit.x, hit.y );
+      ctx.strokeStyle = 'red';
+      ctx.stroke();
+      
+
+      if ( hit.time <= dt ) {
+        lastHit = hit;
+        
+        ball.update( hit.time );
+        ball.fillStyle = 'red';
+        ball.draw( ctx );
+
+        dt -= hit.time;
+
+        ball.bounceFrom( hit );
+      }
+      else {
+        ball.update( dt );
+        ball.fillStyle = 'orange';
+        ball.draw( ctx );
+        dt = 0;
+      }
+    }
+  };
+  
+
+</script>
+

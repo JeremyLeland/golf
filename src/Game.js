@@ -27,30 +27,30 @@ export class Game {
     window.onkeydown = ( e ) => this.keysPressed.add( e.key );
     window.onkeyup   = ( e ) => this.keysPressed.delete( e.key );
 
-    const onInput = ( e ) => {
+    const inputStart = ( e ) => {
+      this.mouseDown = true;
+    }
+    const inputMove = ( e ) => {
       const event = e.touches ? e.touches[ 0 ] : e;
 
-      this.mouseDown = true;
       this.mouseX = event.clientX;
       this.mouseY = event.clientY;
       this.mouseMovementX = this.#lastX ? this.mouseX - this.#lastX : 0;
       this.mouseMovementY = this.#lastY ? this.mouseY - this.#lastY : 0;
       this.#lastX = this.mouseX;
       this.#lastY = this.mouseY;
-
-      e.preventDefault();   // prevent scroll/zoom in iOS Safari? (not sure if this actually does anything)
     }
-    const stopInput = ( e ) => {
+    const inputStop = ( e ) => {
       this.mouseDown = false;
       this.#lastX = undefined;
       this.#lastY = undefined;
     }
-    document.addEventListener( 'mousemove',  onInput, { passive: false } );
-    document.addEventListener( 'touchmove',  onInput, { passive: false } );
-    document.addEventListener( 'mousedown',  onInput, { passive: false } );
-    document.addEventListener( 'touchstart', onInput, { passive: false } );
-    document.addEventListener( 'mouseup',  stopInput );
-    document.addEventListener( 'touchend', stopInput );
+    document.addEventListener( 'mousedown',  inputStart );
+    document.addEventListener( 'touchstart', inputStart );
+    document.addEventListener( 'mousemove', inputMove );
+    document.addEventListener( 'touchmove', inputMove );
+    document.addEventListener( 'mouseup',  inputStop );
+    document.addEventListener( 'touchend', inputStop );
     
 
     let lastTime = null;
@@ -60,7 +60,7 @@ export class Game {
       lastTime = now;
   
       ctx.clearRect( 0, 0, ctx.canvas.width, ctx.canvas.height );
-      
+
       ctx.save();
       ctx.translate( this.scrollX, this.scrollY );
       this.draw( ctx );

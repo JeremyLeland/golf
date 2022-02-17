@@ -4,8 +4,9 @@ export class Ball {
   x = 0;
   y = 0;
   dx = 0;
-  dy = 0.04;
+  dy = 0.05;
   size = 6;
+  fillStyle = 'white';
 
   #path = new Path2D();
 
@@ -22,12 +23,24 @@ export class Ball {
     this.y += this.dy * dt;
   }
 
+  bounceFrom( hit ) {
+    const f = 1, r = 1;
+
+    const vDotN = ( this.dx * hit.normal.x + this.dy * hit.normal.y );
+
+    const uX = vDotN * hit.normal.x;
+    const uY = vDotN * hit.normal.y;
+    
+    this.dx = f * ( this.dx - uX ) - r * uX;
+    this.dy = f * ( this.dy - uY ) - r * uY;
+  }
+
   draw( ctx ) {
     ctx.save();
 
     ctx.translate( this.x, this.y );
 
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = this.fillStyle;
     ctx.fill( this.#path );
     ctx.strokeStyle = 'black';
     ctx.stroke( this.#path );
