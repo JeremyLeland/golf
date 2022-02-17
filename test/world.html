@@ -19,7 +19,7 @@
   game.scrollX = 300;
 
   game.update = ( dt ) => {
-    // world.update( dt );
+    world.update( { ball: ball, walls: level.getWallsNear( ball ), dt: dt } );
 
     game.scrollX = window.innerWidth / 2 - ball.x;
     game.scrollY = window.innerHeight / 2 - ball.y;

@@ -1,6 +1,10 @@
+const GRAVITY = 0.0001;
+
 export class Ball {
   x = 0;
   y = 0;
+  dx = 0;
+  dy = 0;
   size = 6;
 
   #path = new Path2D();
@@ -13,12 +17,14 @@ export class Ball {
   }
 
   update( dt ) {
-
+    // this.dy += GRAVITY * dt;
+    this.x += this.dx * dt;
+    this.y += this.dy * dt;
   }
 
   draw( ctx ) {
     ctx.save();
-    
+
     ctx.translate( this.x, this.y );
 
     ctx.fillStyle = 'white';

@@ -1,17 +1,14 @@
 export class World {
-  ball;
-  walls = [];
-
-  update( dt ) {
+  update( { ball, walls, dt } ) {
     let lastHit;
 
     for ( let tries = 0; dt > 0 && tries < 10; tries ++ ) {   // don't get stuck forever
       const hits = [];
 
-      this.walls.filter( 
+      walls.filter( 
         wall => !lastHit?.entities.includes( wall ) 
       ).forEach( 
-        wall => hits.push( wall.getCollision( this.ball ) ) 
+        wall => hits.push( wall.getCollision( ball ) ) 
       );
 
       const hit = hits.reduce( 
@@ -22,22 +19,22 @@ export class World {
       if ( 0 < hit.time && hit.time <= dt ) {
         lastHit = hit;
         
-        this.ball.update( hit.time );
+        ball.update( hit.time );
         dt -= hit.time;
 
         const f = 1, r = 1;
         const m1 = 1, m2 = 1;
 
-        const vDotN = ( this.ball.dx * hit.normal.x + this.ball.dy * hit.normal.y ) / ( m1 + m2 );
+        const vDotN = ( ball.dx * hit.normal.x + ball.dy * hit.normal.y ) / ( m1 + m2 );
 
         const uX = m2 * vDotN * hit.normal.x;
         const uY = m2 * vDotN * hit.normal.y;
         
-        this.ball.dx = f * ( this.ball.dx - uX ) - r * uX;
-        this.ball.dy = f * ( this.ball.dy - uY ) - r * uY;
+        ball.dx = f * ( ball.dx - uX ) - r * uX;
+        ball.dy = f * ( ball.dy - uY ) - r * uY;
       }
       else {
-        this.ball.update( dt );
+        ball.update( dt );
         dt = 0;
       }
     }

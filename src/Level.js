@@ -1,16 +1,21 @@
+import { Wall } from "./Wall.js";
+
 export class Level {
   #leftPoints = [];
   #rightPoints = [];
 
   #leftPath;
   #rightPath;
+  #normalsPath = new Path2D();
+
+  #walls = [];
 
   constructor() {    
     const width = 500, height = 400, height_var = 100;
 
     const flags = [];
 
-    for ( let t = 0; t <= 120; t += 0.5 ) {
+    for ( let t = 0; t <= 1; t += 0.5 ) {
       flags.push( {
         x: width * ( Math.random() - 0.5 ),
         y: height * t + height_var * ( Math.random() - 0.5 ),
@@ -51,6 +56,28 @@ export class Level {
     [ this.#leftPath, this.#rightPath ] = [ this.#leftPoints, this.#rightPoints ].map( 
       points => new Path2D( 'M ' + points.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) )
     );
+
+    for ( let i = 0; i < this.#leftPoints.length - 1; i ++ ) {
+      const current = this.#leftPoints[ i ], next = this.#leftPoints[ i + 1 ];
+      this.#walls.push( new Wall( current.x, current.y, next.x, next.y ) );
+    }
+
+    for ( let i = 0; i < this.#rightPoints.length - 1; i ++ ) {
+      const current = this.#rightPoints[ i + 1 ], next = this.#rightPoints[ i ];
+      this.#walls.push( new Wall( current.x, current.y, next.x, next.y ) );
+    }
+    
+
+    const normLen = 10;
+    this.#walls.forEach( wall => {
+      const midx = ( wall.x1 + wall.x2 ) / 2;
+      const midy = ( wall.y1 + wall.y2 ) / 2;
+      this.#normalsPath.moveTo( midx, midy );
+      this.#normalsPath.lineTo( 
+        midx + wall.normal.x * normLen, 
+        midy + wall.normal.y * normLen, 
+      );
+    } );
   }
 
   spawn( ball ) {
@@ -59,10 +86,17 @@ export class Level {
     ball.y = ( left.y  + right.y ) / 2;
   }
 
+  getWallsNear( ball ) {
+    // TODO: Actually calcuate nearby walls and only return those
+    return this.#walls;
+  }
+
   draw( ctx ) {
     ctx.strokeStyle = 'green';
     ctx.stroke( this.#leftPath );
     ctx.stroke( this.#rightPath );
+    ctx.strokeStyle = 'gray';
+    ctx.stroke( this.#normalsPath );
   }
 }
 
