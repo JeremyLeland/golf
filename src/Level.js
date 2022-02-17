@@ -53,6 +53,12 @@ export class Level {
     );
   }
 
+  spawn( ball ) {
+    const left = this.#leftPoints[ 0 ], right = this.#rightPoints[ 0 ];
+    ball.x = ( left.x + right.x ) / 2;
+    ball.y = ( left.y  + right.y ) / 2;
+  }
+
   draw( ctx ) {
     ctx.strokeStyle = 'green';
     ctx.stroke( this.#leftPath );

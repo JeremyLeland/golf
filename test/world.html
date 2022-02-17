@@ -8,9 +8,11 @@
   import { World } from '../src/World.js';
   import { Ball } from '../src/Ball.js';
 
-  const ball = new Ball( 0, 0 );
+  const ball = new Ball();
   const level = new Level();
   const world = new World();
+
+  level.spawn( ball );
 
   const game = new Game();
 
@@ -18,6 +20,9 @@
 
   game.update = ( dt ) => {
     // world.update( dt );
+
+    game.scrollX = window.innerWidth / 2 - ball.x;
+    game.scrollY = window.innerHeight / 2 - ball.y;
   };
 
   game.draw = ( ctx ) => {

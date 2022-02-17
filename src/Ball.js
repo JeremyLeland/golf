@@ -9,7 +9,7 @@ export class Ball {
     this.x = x;
     this.y = y;
 
-    this.#path.arc( this.x, this.y, this.size, 0, Math.PI * 2 );
+    this.#path.arc( 0, 0, this.size, 0, Math.PI * 2 );
   }
 
   update( dt ) {
@@ -17,10 +17,16 @@ export class Ball {
   }
 
   draw( ctx ) {
+    ctx.save();
+    
+    ctx.translate( this.x, this.y );
+
     ctx.fillStyle = 'white';
     ctx.fill( this.#path );
     ctx.strokeStyle = 'black';
     ctx.stroke( this.#path );
+
+    ctx.restore();
   }
 
   getSegmentHit( { x1, y1, x2, y2 } ) {
