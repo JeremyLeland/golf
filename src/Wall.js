@@ -35,25 +35,28 @@ export class Wall {
     const hitX = entity.x + entity.dx * hitTime;
     const hitY = entity.y + entity.dy * hitTime;
 
-    const d1 = Math.hypot( this.x1 - hitX, this.y1 - hitY );
-    const d2 = Math.hypot( this.x2 - hitX, this.y2 - hitY );
-        
-    // Inside segment
-    if ( d1 < this.length && d2 < this.length ) {
-      return {
-        time: hitTime,
-        normal: this.normal,
-        x: hitX,
-        y: hitY,
-        entities: [ entity, this ],
-      };
+    const vx = this.x2 - this.x1;
+    const vy = this.y2 - this.y1;
+    const wx = hitX - this.x1;
+    const wy = hitY - this.y1;
+
+    const c1 = wx * vx + wy * vy;
+    if ( c1 <= 0 ) {
+      return getPointHit( entity, this.x1, this.y1 );
     }
 
-    // End points. If these miss, they will return time: Infinity
-    const hit1 = getPointHit( entity, this.x1, this.y1 );
-    const hit2 = getPointHit( entity, this.x2, this.y2 );
+    const c2 = vx * vx + vy * vy;
+    if ( c2 <= c1 ) {
+      return getPointHit( entity, this.x2, this.y2 );
+    }
 
-    return hit1.time < hit2.time ? hit1 : hit2;
+    return {
+      time: hitTime,
+      normal: this.normal,
+      x: hitX,
+      y: hitY,
+      entities: [ entity, this ],
+    };
   }
 
   draw( ctx ) {
@@ -82,17 +85,12 @@ function getPointHit( entity, cx, cy ) {
 
   const a = dX * dX + dY * dY;
   const b = 2 * ( fX * dX + fY * dY ); 
-  const c = ( fX * fX + fY * fY ) - Math.pow( entity.radius, 2 );
+  const c = ( fX * fX + fY * fY ) - Math.pow( entity.size, 2 );
 
   let disc = b * b - 4 * a * c;
 
   if ( disc > 0 ) {
-    disc = Math.sqrt( disc );
-
-    const t0 = ( -b - disc ) / ( 2 * a );
-    //const t1 = ( -b + disc ) / ( 2 * a );
-
-    const hitTime = t0;// < 0 ? t1 : t0;
+    const hitTime = ( -b - Math.sqrt( disc ) ) / ( 2 * a );
 
     const hitX = entity.x + entity.dx * hitTime;
     const hitY = entity.y + entity.dy * hitTime;
