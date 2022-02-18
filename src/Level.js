@@ -15,7 +15,7 @@ export class Level {
 
     const flags = [];
 
-    for ( let t = 0; t <= 1; t += 0.5 ) {
+    for ( let t = 0; t <= 10; t += 0.5 ) {
       flags.push( {
         x: width * ( Math.random() - 0.5 ),
         y: height * t + height_var * ( Math.random() - 0.5 ),

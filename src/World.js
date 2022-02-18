@@ -14,10 +14,8 @@ export class World {
   }
 
   update( { ball, walls, dt } ) {
-    let lastHit;
-
-    for ( let tries = 0; dt > 0 && tries < 10; tries ++ ) {   // don't get stuck forever
-      const hit = this.getNextHit( ball, walls );
+    for ( let tries = 0, lastHit; dt > 0 && tries < 10; tries ++ ) {   // don't get stuck forever
+      const hit = this.getNextHit( ball, walls, lastHit );
 
       if ( hit.time <= dt ) {
         lastHit = hit;

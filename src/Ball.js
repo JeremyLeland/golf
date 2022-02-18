@@ -4,7 +4,7 @@ export class Ball {
   x = 0;
   y = 0;
   dx = 0;
-  dy = 0.05;
+  dy = 0;
   size = 6;
   fillStyle = 'white';
 
@@ -18,13 +18,13 @@ export class Ball {
   }
 
   update( dt ) {
-    //this.dy += GRAVITY * dt;
+    this.dy += GRAVITY * dt;
     this.x += this.dx * dt;
     this.y += this.dy * dt;
   }
 
   bounceFrom( hit ) {
-    const f = 1, r = 1;
+    const f = 0.9, r = 0.5;
 
     const vDotN = ( this.dx * hit.normal.x + this.dy * hit.normal.y );
 
