@@ -1,5 +1,7 @@
 import { Wall } from "./Wall.js";
 
+const FLAG_WIDTH = 5, FLAG_HEIGHT = 10;
+
 export class Level {
   #leftPoints = [];
   #rightPoints = [];
@@ -9,6 +11,7 @@ export class Level {
   #normalsPath = new Path2D();
 
   #walls = [];
+  #flags = [];
 
   constructor() {    
     const width = 500, height = 400, height_var = 100;
@@ -21,6 +24,8 @@ export class Level {
         y: height * t + height_var * ( Math.random() - 0.5 ),
       } );
     }
+
+    this.#flags = flags;
 
     const curves = getCurvesThroughPoints( flags );
 
@@ -97,6 +102,22 @@ export class Level {
     ctx.stroke( this.#rightPath );
     ctx.strokeStyle = 'gray';
     ctx.stroke( this.#normalsPath );
+
+    this.#flags.forEach( flag => {
+      ctx.beginPath();
+      ctx.moveTo( flag.x, flag.y );
+      ctx.lineTo( flag.x, flag.y - FLAG_HEIGHT );
+      ctx.strokeStyle = 'white';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo( flag.x, flag.y - FLAG_HEIGHT );
+      ctx.lineTo( flag.x + FLAG_WIDTH, flag.y - FLAG_HEIGHT * 0.75 );
+      ctx.lineTo( flag.x, flag.y - FLAG_HEIGHT * 0.5 );
+      ctx.closePath();
+      ctx.fillStyle = 'red';
+      ctx.fill();
+    } );
   }
 }
 
