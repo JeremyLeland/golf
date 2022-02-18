@@ -1,27 +1,30 @@
 import { Wall } from "./Wall.js";
 
+const LEVEL_HEIGHT = 900;
 const FLAG_WIDTH = 5, FLAG_HEIGHT = 10;
 
 export class Level {
-  #leftPoints = [];
-  #rightPoints = [];
+  #topPoints = [];
+  #bottomPoints = [];
 
-  #leftPath;
-  #rightPath;
+  #topPath;
+  #bottomPath;
+
+  #midPath = new Path2D();
   #normalsPath = new Path2D();
 
   #walls = [];
   #flags = [];
 
   constructor() {    
-    const width = 500, height = 400, height_var = 100;
+    const width = 500, height_var = 100;
 
     const flags = [];
 
-    for ( let t = 0; t <= 10; t += 0.5 ) {
+    for ( let t = 0; t <= 10; t ++ ) {
       flags.push( {
-        x: width * ( Math.random() - 0.5 ),
-        y: height * t + height_var * ( Math.random() - 0.5 ),
+        x: width * t, //+ height_var * ( Math.random() - 0.5 ),
+        y: LEVEL_HEIGHT * Math.random(),
       } );
     }
 
@@ -29,46 +32,58 @@ export class Level {
 
     const curves = getCurvesThroughPoints( flags );
 
-    //const middle = [], offset = [], left = [], right = [];
-
     curves.forEach( c => {
       for ( let t = 0; t < 1; t += 0.05 ) {
         const pos = getCurvePosition( c, t );
         const norm = getCurveNormal( c, t );
-        //middle.push( pos );
 
-        const off = Math.sin( t * Math.PI * 2 * 123 ) * Math.random() * 5;
+        this.#midPath.lineTo( pos.x, pos.y );
+
+        const off = 5;// * Math.random() * Math.sin( t * Math.PI * 2 * 123 );
         const mid = {
           x: pos.x + norm.x * off,
           y: pos.y + norm.y * off,
         }
-        //offset.push( mid );
 
         const radius = 40 + 10 * Math.sin( t * Math.PI * 2 ); //10 + ( 2 + Math.sin( t * Math.PI * 2 * 123 ) ) * 5;
-        this.#leftPoints.push( { 
-          x: mid.x + norm.x * radius,// + ( Math.random() - 0.5 ) * 5,
-          y: mid.y + norm.y * radius,// + ( Math.random() - 0.5 ) * 5,
+        this.#topPoints.push( { 
+          x: mid.x + norm.x * -radius,// + ( Math.random() - 0.5 ) * 5,
+          y: mid.y + norm.y * -radius,// + ( Math.random() - 0.5 ) * 5,
         } );
 
         // radius = 10 + ( 2 + Math.sin( t * Math.PI * 2 * 123 + 42 ) ) * 5;
-        this.#rightPoints.push( {
-          x: mid.x + norm.x * -radius,// + ( Math.random() - 0.5 ) * 5,
-          y: mid.y + norm.y * -radius,// + ( Math.random() - 0.5 ) * 5,
+        this.#bottomPoints.push( {
+          x: mid.x + norm.x * radius,// + ( Math.random() - 0.5 ) * 5,
+          y: mid.y + norm.y * radius,// + ( Math.random() - 0.5 ) * 5,
         } );
       }
     } );
 
-    [ this.#leftPath, this.#rightPath ] = [ this.#leftPoints, this.#rightPoints ].map( 
-      points => new Path2D( 'M ' + points.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) )
-    );
+    this.#topPath = new Path2D( 'M 0,0 L ' +
+      this.#topPoints.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) +
+    'V 0 Z' );
 
-    for ( let i = 0; i < this.#leftPoints.length - 1; i ++ ) {
-      const current = this.#leftPoints[ i ], next = this.#leftPoints[ i + 1 ];
+    this.#bottomPath = new Path2D( `M 0,${ LEVEL_HEIGHT } L ` +
+      this.#bottomPoints.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) +
+    `V ${ LEVEL_HEIGHT } Z` );
+
+
+    // ).moveTo( 0, 0 );
+    // this.#leftPoints.forEach( p => this.#leftPath.lineTo( p.x, p.y ) );
+    // this.#leftPath.lineTo( 0, this.#leftPoints[ this.#leftPoints.length - 1 ].y );
+    // this.#leftPath.closePath
+
+    // [ this.#leftPath, this.#rightPath ] = [ this.#leftPoints, this.#rightPoints ].map( 
+    //   points => new Path2D( 'M ' + points.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) )
+    // );
+
+    for ( let i = 0; i < this.#topPoints.length - 1; i ++ ) {
+      const current = this.#topPoints[ i + 1 ], next = this.#topPoints[ i ];
       this.#walls.push( new Wall( current.x, current.y, next.x, next.y ) );
     }
 
-    for ( let i = 0; i < this.#rightPoints.length - 1; i ++ ) {
-      const current = this.#rightPoints[ i + 1 ], next = this.#rightPoints[ i ];
+    for ( let i = 0; i < this.#bottomPoints.length - 1; i ++ ) {
+      const current = this.#bottomPoints[ i ], next = this.#bottomPoints[ i + 1 ];
       this.#walls.push( new Wall( current.x, current.y, next.x, next.y ) );
     }
     
@@ -86,9 +101,9 @@ export class Level {
   }
 
   spawn( ball ) {
-    const left = this.#leftPoints[ 0 ], right = this.#rightPoints[ 0 ];
-    ball.x = ( left.x + right.x ) / 2;
-    ball.y = ( left.y  + right.y ) / 2;
+    const top = this.#topPoints[ 0 ], bottom = this.#bottomPoints[ 0 ];
+    ball.x = ( top.x + bottom.x ) / 2;
+    ball.y = ( top.y  + bottom.y ) / 2;
   }
 
   getWallsNear( ball ) {
@@ -97,10 +112,12 @@ export class Level {
   }
 
   draw( ctx ) {
-    ctx.strokeStyle = 'green';
-    ctx.stroke( this.#leftPath );
-    ctx.stroke( this.#rightPath );
+    ctx.fillStyle = 'green';
+    ctx.fill( this.#topPath );
+    ctx.fill( this.#bottomPath );
+
     ctx.strokeStyle = 'gray';
+    ctx.stroke( this.#midPath );
     ctx.stroke( this.#normalsPath );
 
     this.#flags.forEach( flag => {
