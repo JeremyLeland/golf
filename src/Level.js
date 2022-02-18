@@ -7,8 +7,8 @@ export class Level {
   #topPoints = [];
   #bottomPoints = [];
 
-  #topPath;
-  #bottomPath;
+  #topPath = new Path2D();
+  #bottomPath = new Path2D();
 
   #midPath = new Path2D();
   #normalsPath = new Path2D();
@@ -19,71 +19,61 @@ export class Level {
   constructor() {    
     const width = 500, height_var = 100;
 
-    // TODO: Flags will be separate from control points, but they look cute for now
-    const flags = [];
 
-    for ( let x = 0, y = LEVEL_HEIGHT / 2, t = 0; t < 10; t ++ ) {
-      flags.push( { x: x, y: y } );
+    // TODO: Create random points for middle, then random 
+
+    const midPoints = [];
+
+    for ( let x = 0, y = LEVEL_HEIGHT / 2, t = 0; t < 20; t ++ ) {
+      midPoints.push( { x: x, y: y } );
+      this.#midPath.lineTo( x, y );
+
       x += width * ( Math.random() + 0.5 );
       const dir = Math.random() - 0.5;
       y += dir * ( dir < 0 ? y : LEVEL_HEIGHT - y );
     }
 
-    // for ( let t = 0; t <= 10; t ++ ) {
-    //   flags.push( {
-    //     x: width * t, //+ height_var * ( Math.random() - 0.5 ),
-    //     y: LEVEL_HEIGHT * Math.random(),
-    //   } );
-    // }
+    const topPoints = midPoints.map( p => ( { x: p.x, y: p.y - 0.8 * Math.random() * p.y } ) );
+    const bottomPoints = midPoints.map( p => ( { x: p.x, y: p.y + 0.8 * Math.random() * ( LEVEL_HEIGHT - p.y ) } ) );
 
-    this.#flags = flags;
+    const topCurves = getCurvesThroughPoints( topPoints );
+    const bottomCurves = getCurvesThroughPoints( bottomPoints );
 
-    const curves = getCurvesThroughPoints( flags );
-
-    curves.forEach( c => {
+    this.#topPath.moveTo( 0, 0 );
+    topCurves.forEach( c => {
       for ( let t = 0; t < 1; t += 0.05 ) {
         const pos = getCurvePosition( c, t );
-        // const norm = getCurveNormal( c, t );
+        const norm = getCurveNormal( c, t );
 
-        this.#midPath.lineTo( pos.x, pos.y );
+        // const offset = 5 * Math.random() * Math.sin( t * Math.PI * 2 * 123 );
+        const offset = 50 * Math.sin( t * Math.PI * 2 * 321 ) //* Math.random();
+        pos.x += norm.x * offset;
+        pos.y += norm.y * offset;
 
-        const off = 5 * Math.random() * Math.sin( t * Math.PI * 2 * 123 );
-        const mid = {
-          x: pos.x, // + norm.x * off,
-          y: pos.y + off //norm.y * off,
-        }
-
-        const radius = 40 + 10 * Math.sin( t * Math.PI * 2 ); //10 + ( 2 + Math.sin( t * Math.PI * 2 * 123 ) ) * 5;
-        this.#topPoints.push( { 
-          x: mid.x,// + norm.x * -radius,// + ( Math.random() - 0.5 ) * 5,
-          y: mid.y - radius,// + norm.y * -radius,// + ( Math.random() - 0.5 ) * 5,
-        } );
-
-        // radius = 10 + ( 2 + Math.sin( t * Math.PI * 2 * 123 + 42 ) ) * 5;
-        this.#bottomPoints.push( {
-          x: mid.x,// + norm.x * radius,// + ( Math.random() - 0.5 ) * 5,
-          y: mid.y + radius //norm.y * radius,// + ( Math.random() - 0.5 ) * 5,
-        } );
+        this.#topPoints.push( { x: pos.x, y: pos.y } );
+        this.#topPath.lineTo( pos.x, pos.y );
       }
     } );
+    this.#topPath.lineTo( this.#topPoints[ this.#topPoints.length - 1 ].x, 0 );
+    this.#topPath.closePath();
 
-    this.#topPath = new Path2D( 'M 0,0 L ' +
-      this.#topPoints.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) +
-    'V 0 Z' );
+    this.#bottomPath.moveTo( 0, LEVEL_HEIGHT );
+    bottomCurves.forEach( c => {
+      for ( let t = 0; t < 1; t += 0.05 ) {
+        const pos = getCurvePosition( c, t );
+        const norm = getCurveNormal( c, t );
 
-    this.#bottomPath = new Path2D( `M 0,${ LEVEL_HEIGHT } L ` +
-      this.#bottomPoints.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) +
-    `V ${ LEVEL_HEIGHT } Z` );
+        //const offset = 5 * Math.sin( t * Math.PI * 2 * 123 ) * Math.random();
+        const offset = -50 * Math.cos( 42 + t * Math.PI * 2 * 4321 ) //* Math.random();
+        pos.x += norm.x * offset;
+        pos.y += norm.y * offset;
 
-
-    // ).moveTo( 0, 0 );
-    // this.#leftPoints.forEach( p => this.#leftPath.lineTo( p.x, p.y ) );
-    // this.#leftPath.lineTo( 0, this.#leftPoints[ this.#leftPoints.length - 1 ].y );
-    // this.#leftPath.closePath
-
-    // [ this.#leftPath, this.#rightPath ] = [ this.#leftPoints, this.#rightPoints ].map( 
-    //   points => new Path2D( 'M ' + points.map( p => `${ p.x },${ p.y }` ).join( ' L ' ) )
-    // );
+        this.#bottomPoints.push( { x: pos.x, y: pos.y } );
+        this.#bottomPath.lineTo( pos.x, pos.y );
+      }
+    } );
+    this.#bottomPath.lineTo( this.#bottomPoints[ this.#bottomPoints.length - 1 ].x, LEVEL_HEIGHT );
+    this.#bottomPath.closePath();
 
     for ( let i = 0; i < this.#topPoints.length - 1; i ++ ) {
       const current = this.#topPoints[ i + 1 ], next = this.#topPoints[ i ];
@@ -125,7 +115,7 @@ export class Level {
     ctx.fill( this.#bottomPath );
 
     ctx.strokeStyle = 'gray';
-    ctx.stroke( this.#midPath );
+    // ctx.stroke( this.#midPath );
     ctx.stroke( this.#normalsPath );
 
     this.#flags.forEach( flag => {
