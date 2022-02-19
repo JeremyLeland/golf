@@ -3,6 +3,8 @@ import { Wall } from "./Wall.js";
 const LEVEL_HEIGHT = 900;
 const FLAG_WIDTH = 5, FLAG_HEIGHT = 10;
 
+const ISLAND_MIN_WIDTH = 100, ISLAND_MAX_WIDTH = 300;
+
 export class Level {
   // TODO: Don't need to save these, just the walls and Path2Ds
   #topPoints = [];
@@ -107,7 +109,7 @@ export class Level {
       // Trying to break up islands...maybe we need an island min and max width?
       const deltaY = bottom.y - top.y;
 
-      if ( deltaY > 400 ) {
+      if ( right - left < ISLAND_MAX_WIDTH && 400 < deltaY ) {
         if ( !left ) {
           left = top.x;
           upper = top.y + 100;
@@ -118,7 +120,23 @@ export class Level {
         lower = Math.min( bottom.y - 100, lower );
       }
       else {
-        this.#islandPath.rect( left, upper, ( right - left ), ( lower - upper ) );
+
+        if ( ISLAND_MIN_WIDTH < right - left ) {
+          this.#islandPath.rect( left, upper, ( right - left ), ( lower - upper ) );
+
+          const islandGuide = getPoints( { 
+            cx: ( left + right ) / 2, 
+            cy: ( upper + lower ) / 2, 
+            width: ( right - left ) / 2,
+            height: ( lower - upper ) / 2,
+            perterb: 20,
+          } );
+
+          const path = new Path2D();
+          islandGuide.forEach( point => path.lineTo( point.x, point.y ) );
+          path.closePath();
+          this.#islandPath.addPath( path );
+        }
 
         left = null;
         upper = null;
@@ -191,6 +209,17 @@ export class Level {
   }
 }
 
+function getPoints( { cx = 0, cy = 0, width = 1, height = 1, numPoints = 10 } ) {
+  const spacing = Math.PI * 2 / numPoints;
+  const angles = Array.from( Array( numPoints ), ( _, ndx ) => 
+    spacing * ( ndx + ( Math.random() - 0.5 ) * 0.5 ) 
+  );
+  return angles.map( angle => ( {
+    x: cx + width  * Math.cos( angle ) * ( 0.5 + 0.5 * Math.random() ),
+    y: cy + height * Math.sin( angle ) * ( 0.5 + 0.5 * Math.random() ),
+  } ) );
+}
+
 // See: http://csharphelper.com/blog/2019/04/draw-a-smooth-curve-in-wpf-and-c/
 function getCurvesThroughPoints( points, tension = 0.5 ) {
   const control_scale = tension / 0.5 * 0.175;
@@ -252,4 +281,25 @@ function getCurveNormal( curve, t ) {
   // also, normalize it
   const dist = Math.hypot( x, y );
   return { x: -y / dist, y: x / dist };
+}
+
+// https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
+// https://github.com/bryc/code/blob/master/jshash/PRNGs.md
+function sfc32(a, b, c, d) {
+  return function() {
+    a >>>= 0; b >>>= 0; c >>>= 0; d >>>= 0; 
+    var t = (a + b) | 0;
+    a = b ^ b >>> 9;
+    b = c + (c << 3) | 0;
+    c = (c << 21 | c >>> 11);
+    d = d + 1 | 0;
+    t = t + d | 0;
+    c = c + t | 0;
+    return (t >>> 0) / 4294967296;
+  }
+}
+
+function noise( x, y ) {
+  // borrowing from https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
+  return ( Math.abs( Math.sin( x * 12.9898 + y * 78.233 ) ) * 43758.5453 ) % 1;
 }
