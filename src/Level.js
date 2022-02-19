@@ -12,7 +12,7 @@ export class Level {
   #bottomPath = new Path2D();
   #islandPath = new Path2D();
 
-  #midPath = new Path2D();
+  #midGuide = new Path2D();
   #topGuide = new Path2D();
   #bottomGuide = new Path2D();
   #normalsPath = new Path2D();
@@ -24,24 +24,30 @@ export class Level {
     const width = 500, height_var = 100;
 
 
-    // TODO: Create random points for middle, then random 
+    const midGuides = [];
+    const topGuides = [];
+    const bottomGuides = [];
 
-    const midPoints = [];
+    for ( let x = 0, mid = LEVEL_HEIGHT / 2, t = 0; t < 20; t ++ ) {
+      const top    = mid - 0.8 * Math.random() * mid;
+      const bottom = mid + 0.8 * Math.random() * ( LEVEL_HEIGHT - mid );
 
-    for ( let x = 0, y = LEVEL_HEIGHT / 2, t = 0; t < 20; t ++ ) {
-      midPoints.push( { x: x, y: y } );
-      this.#midPath.lineTo( x, y );
+      midGuides.push( { x: x, y: mid } );
+      topGuides.push( { x: x, y: top } );
+      bottomGuides.push( { x: x, y: bottom } );
+
+      this.#midGuide.lineTo( x, mid );
+      this.#midGuide.rect( x - 1, mid - 1, 2, 2 );
+      // this.#topGuide.lineTo( x, top );
+      // this.#bottomGuide.lineTo( x, bottom );
 
       x += width * ( Math.random() + 0.5 );
       const dir = Math.random() - 0.5;
-      y += dir * ( dir < 0 ? y : LEVEL_HEIGHT - y );
+      mid += dir * ( dir < 0 ? mid : LEVEL_HEIGHT - mid );
     }
 
-    const topPoints = midPoints.map( p => ( { x: p.x, y: p.y - 0.8 * Math.random() * p.y } ) );
-    const bottomPoints = midPoints.map( p => ( { x: p.x, y: p.y + 0.8 * Math.random() * ( LEVEL_HEIGHT - p.y ) } ) );
-
-    const topCurves = getCurvesThroughPoints( topPoints );
-    const bottomCurves = getCurvesThroughPoints( bottomPoints );
+    const topCurves = getCurvesThroughPoints( topGuides );
+    const bottomCurves = getCurvesThroughPoints( bottomGuides );
 
     this.#topPath.moveTo( 0, 0 );
     topCurves.forEach( c => {
@@ -92,8 +98,40 @@ export class Level {
       const current = this.#bottomPoints[ i ], next = this.#bottomPoints[ i + 1 ];
       this.#walls.push( new Wall( current.x, current.y, next.x, next.y ) );
     }
-    
 
+    // Generate some islands in open spaces
+    let left, right, upper, lower;
+    for ( let i = 0; i < this.#topPoints.length - 1; i += 3 ) {
+      const top = this.#topPoints[ i ], bottom = this.#bottomPoints[ i ];
+
+      // Trying to break up islands...maybe we need an island min and max width?
+      const deltaY = bottom.y - top.y;
+
+      if ( deltaY > 400 ) {
+        if ( !left ) {
+          left = top.x;
+          upper = top.y + 100;
+          lower = bottom.y - 100;
+        }
+        right = top.x;
+        upper = Math.max( top.y + 100, upper );
+        lower = Math.min( bottom.y - 100, lower );
+      }
+      else {
+        this.#islandPath.rect( left, upper, ( right - left ), ( lower - upper ) );
+
+        left = null;
+        upper = null;
+        lower = null;
+        right = null;
+      }
+
+        // const islandMid = ( top.y + bottom.y ) / 2;
+        // const islandTop    = islandMid - 0.5 * Math.random() * deltaY;
+        // const islandBottom = islandMid + 0.5 * Math.random() * deltaY;
+    }
+    
+    // Show normals (debug)
     const normLen = 10;
     this.#walls.forEach( wall => {
       const midx = ( wall.x1 + wall.x2 ) / 2;
@@ -122,8 +160,11 @@ export class Level {
     ctx.fill( this.#topPath );
     ctx.fill( this.#bottomPath );
 
+    ctx.strokeStyle = 'yellow';
+    ctx.stroke( this.#islandPath );
+
     ctx.strokeStyle = 'cyan';
-    ctx.stroke( this.#midPath );
+    ctx.stroke( this.#midGuide );
 
     ctx.strokeStyle = 'white';
     ctx.stroke( this.#topGuide );
