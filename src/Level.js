@@ -4,13 +4,17 @@ const LEVEL_HEIGHT = 900;
 const FLAG_WIDTH = 5, FLAG_HEIGHT = 10;
 
 export class Level {
+  // TODO: Don't need to save these, just the walls and Path2Ds
   #topPoints = [];
   #bottomPoints = [];
 
   #topPath = new Path2D();
   #bottomPath = new Path2D();
+  #islandPath = new Path2D();
 
   #midPath = new Path2D();
+  #topGuide = new Path2D();
+  #bottomGuide = new Path2D();
   #normalsPath = new Path2D();
 
   #walls = [];
@@ -45,6 +49,8 @@ export class Level {
         const pos = getCurvePosition( c, t );
         const norm = getCurveNormal( c, t );
 
+        this.#topGuide.lineTo( pos.x, pos.y );
+
         // const offset = 5 * Math.random() * Math.sin( t * Math.PI * 2 * 123 );
         const offset = 50 * Math.sin( t * Math.PI * 2 * 321 ) //* Math.random();
         pos.x += norm.x * offset;
@@ -62,6 +68,8 @@ export class Level {
       for ( let t = 0; t < 1; t += 0.05 ) {
         const pos = getCurvePosition( c, t );
         const norm = getCurveNormal( c, t );
+
+        this.#bottomGuide.lineTo( pos.x, pos.y );
 
         //const offset = 5 * Math.sin( t * Math.PI * 2 * 123 ) * Math.random();
         const offset = -50 * Math.cos( 42 + t * Math.PI * 2 * 4321 ) //* Math.random();
@@ -114,8 +122,14 @@ export class Level {
     ctx.fill( this.#topPath );
     ctx.fill( this.#bottomPath );
 
+    ctx.strokeStyle = 'cyan';
+    ctx.stroke( this.#midPath );
+
+    ctx.strokeStyle = 'white';
+    ctx.stroke( this.#topGuide );
+    ctx.stroke( this.#bottomGuide );
+
     ctx.strokeStyle = 'gray';
-    // ctx.stroke( this.#midPath );
     ctx.stroke( this.#normalsPath );
 
     this.#flags.forEach( flag => {
