@@ -1,4 +1,5 @@
-import { Wall } from "./Wall.js";
+import { Wall } from './Wall.js';
+import { Curve } from './Curve.js'
 
 const LEVEL_HEIGHT = 900;
 const FLAG_WIDTH = 5, FLAG_HEIGHT = 10;
@@ -48,14 +49,14 @@ export class Level {
       mid += dir * ( dir < 0 ? mid : LEVEL_HEIGHT - mid );
     }
 
-    const topCurves = getCurvesThroughPoints( topGuides );
-    const bottomCurves = getCurvesThroughPoints( bottomGuides );
+    const topCurves = Curve.getCurvesThroughPoints( topGuides );
+    const bottomCurves = Curve.getCurvesThroughPoints( bottomGuides );
 
     this.#topPath.moveTo( 0, 0 );
     topCurves.forEach( c => {
       for ( let t = 0; t < 1; t += 0.05 ) {
-        const pos = getCurvePosition( c, t );
-        const norm = getCurveNormal( c, t );
+        const pos = c.getPosition( t );
+        const norm = c.getNormal( t );
 
         this.#topGuide.lineTo( pos.x, pos.y );
 
@@ -74,8 +75,8 @@ export class Level {
     this.#bottomPath.moveTo( 0, LEVEL_HEIGHT );
     bottomCurves.forEach( c => {
       for ( let t = 0; t < 1; t += 0.05 ) {
-        const pos = getCurvePosition( c, t );
-        const norm = getCurveNormal( c, t );
+        const pos = c.getPosition( t );
+        const norm = c.getNormal( t );
 
         this.#bottomGuide.lineTo( pos.x, pos.y );
 
@@ -129,11 +130,28 @@ export class Level {
             cy: ( upper + lower ) / 2, 
             width: ( right - left ) / 2,
             height: ( lower - upper ) / 2,
+            numPoints: 5 + Math.floor( 8 * Math.random() ),
             perterb: 20,
           } );
 
+          const curves = Curve.getLoopThroughPoints( islandGuide );
+
+          const islandPoints = [];
+          curves.forEach( c => {
+            for ( let t = 0; t < 1; t += 0.05 ) {
+              const pos = c.getPosition( t );
+              const norm = c.getNormal( t );
+              islandPoints.push( { x: pos.x, y: pos.y } );
+            }
+          } );
+
+          // TODO: Get last point in there as well, so things go smoothly
+          // Maybe last two points?
+          // islandPoints.push( islandPoints[ 0 ] );
+          // islandPoints.push( islandPoints[ 1 ] );
+
           const path = new Path2D();
-          islandGuide.forEach( point => path.lineTo( point.x, point.y ) );
+          islandPoints.forEach( point => path.lineTo( point.x, point.y ) );
           path.closePath();
           this.#islandPath.addPath( path );
         }
@@ -220,69 +238,6 @@ function getPoints( { cx = 0, cy = 0, width = 1, height = 1, numPoints = 10 } ) 
   } ) );
 }
 
-// See: http://csharphelper.com/blog/2019/04/draw-a-smooth-curve-in-wpf-and-c/
-function getCurvesThroughPoints( points, tension = 0.5 ) {
-  const control_scale = tension / 0.5 * 0.175;
-
-  const curves = [];
-
-  for ( let i = 0; i < points.length - 1; i ++ )
-  {
-    const pt_before = points[ Math.max( i - 1, 0 ) ];
-    const pt = points[ i ];
-    const pt_after = points[ i + 1 ];
-    const pt_after2 = points[ Math.min( i + 2, points.length - 1 ) ];
-
-    const p2 = {
-      x: pt.x + control_scale * ( pt_after.x - pt_before.x ),
-      y: pt.y + control_scale * ( pt_after.y - pt_before.y ),
-    };
-    const p3 = {
-      x: pt_after.x - control_scale * ( pt_after2.x - pt.x ),
-      y: pt_after.y - control_scale * ( pt_after2.y - pt.y ),
-    };
-
-    curves.push( {
-      start: pt,
-      control1: p2,
-      control2: p3,
-      end: pt_after,
-    } );
-  }
-
-  return curves;
-}
-
-function getCurvePosition( curve, t ) {
-  const x =     (1-t) * (1-t) * (1-t) * curve.start.x +
-            3 * (1-t) * (1-t) *    t  * curve.control1.x +
-            3 * (1-t) *    t  *    t  * curve.control2.x +
-                    t  *    t  *    t  * curve.end.x;
-
-  const y =     (1-t) * (1-t) * (1-t) * curve.start.y +
-            3 * (1-t) * (1-t) *    t  * curve.control1.y +
-            3 * (1-t) *    t  *    t  * curve.control2.y +
-                    t  *    t  *    t  * curve.end.y;
-
-  return { x: x, y: y };
-}
-
-// See: https://pomax.github.io/bezierinfo/#derivatives
-function getCurveNormal( curve, t ) {
-  const x = 3 * (1-t) * (1-t) * ( curve.control1.x - curve.start.x ) +
-            3 * (1-t) *    t  * ( curve.control2.x - curve.control1.x ) +
-            3 *    t  *    t  * ( curve.end.x - curve.control2.x );
-
-  const y = 3 * (1-t) * (1-t) * ( curve.control1.y - curve.start.y ) +
-            3 * (1-t) *    t  * ( curve.control2.y - curve.control1.y ) +
-            3 *    t  *    t  * ( curve.end.y - curve.control2.y );
-
-  // normal = -y,x of tangent
-  // also, normalize it
-  const dist = Math.hypot( x, y );
-  return { x: -y / dist, y: x / dist };
-}
-
 // https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript
 // https://github.com/bryc/code/blob/master/jshash/PRNGs.md
 function sfc32(a, b, c, d) {
@@ -303,3 +258,4 @@ function noise( x, y ) {
   // borrowing from https://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner
   return ( Math.abs( Math.sin( x * 12.9898 + y * 78.233 ) ) * 43758.5453 ) % 1;
 }
+

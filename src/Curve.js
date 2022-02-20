@@ -81,10 +81,8 @@ export class Curve {
               3 * (1-t) *    t  * ( this.control2.y - this.control1.y ) +
               3 *    t  *    t  * ( this.end.y - this.control2.y );
 
-    // normal = -y,x of tangent
-    // also, normalize it
     const dist = Math.hypot( x, y );
-    return { x: -y / dist, y: x / dist };
+    return { x: y / dist, y: -x / dist };
   }
 
   draw( ctx, step = 0.05 ) {
