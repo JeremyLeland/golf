@@ -11,9 +11,7 @@ export class Level {
   #topPoints = [];
   #bottomPoints = [];
 
-  #topPath = new Path2D();
-  #bottomPath = new Path2D();
-  #islandPath = new Path2D();
+  #path = new Path2D();
 
   #midGuide = new Path2D();
   #topGuide = new Path2D();
@@ -52,7 +50,7 @@ export class Level {
     const topCurves = Curve.getCurvesThroughPoints( topGuides );
     const bottomCurves = Curve.getCurvesThroughPoints( bottomGuides );
 
-    this.#topPath.moveTo( 0, 0 );
+    this.#path.moveTo( 0, 0 );
     topCurves.forEach( c => {
       for ( let t = 0; t < 1; t += 0.05 ) {
         const pos = c.getPosition( t );
@@ -66,13 +64,13 @@ export class Level {
         pos.y += norm.y * offset;
 
         this.#topPoints.push( { x: pos.x, y: pos.y } );
-        this.#topPath.lineTo( pos.x, pos.y );
+        this.#path.lineTo( pos.x, pos.y );
       }
     } );
-    this.#topPath.lineTo( this.#topPoints[ this.#topPoints.length - 1 ].x, 0 );
-    this.#topPath.closePath();
+    this.#path.lineTo( this.#topPoints[ this.#topPoints.length - 1 ].x, 0 );
+    this.#path.closePath();
 
-    this.#bottomPath.moveTo( 0, LEVEL_HEIGHT );
+    this.#path.moveTo( 0, LEVEL_HEIGHT );
     bottomCurves.forEach( c => {
       for ( let t = 0; t < 1; t += 0.05 ) {
         const pos = c.getPosition( t );
@@ -86,11 +84,11 @@ export class Level {
         pos.y += norm.y * offset;
 
         this.#bottomPoints.push( { x: pos.x, y: pos.y } );
-        this.#bottomPath.lineTo( pos.x, pos.y );
+        this.#path.lineTo( pos.x, pos.y );
       }
     } );
-    this.#bottomPath.lineTo( this.#bottomPoints[ this.#bottomPoints.length - 1 ].x, LEVEL_HEIGHT );
-    this.#bottomPath.closePath();
+    this.#path.lineTo( this.#bottomPoints[ this.#bottomPoints.length - 1 ].x, LEVEL_HEIGHT );
+    this.#path.closePath();
 
     for ( let i = 0; i < this.#topPoints.length - 1; i ++ ) {
       const current = this.#topPoints[ i + 1 ], next = this.#topPoints[ i ];
@@ -123,7 +121,7 @@ export class Level {
       else {
 
         if ( ISLAND_MIN_WIDTH < right - left ) {
-          this.#islandPath.rect( left, upper, ( right - left ), ( lower - upper ) );
+          // this.#islandPath.rect( left, upper, ( right - left ), ( lower - upper ) );
 
           const islandGuide = getPoints( { 
             cx: ( left + right ) / 2, 
@@ -138,22 +136,22 @@ export class Level {
 
           const islandPoints = [];
           curves.forEach( c => {
-            for ( let t = 0; t < 1; t += 0.05 ) {
+            for ( let t = 0; t < 1; t += 0.2 ) {
               const pos = c.getPosition( t );
               const norm = c.getNormal( t );
               islandPoints.push( { x: pos.x, y: pos.y } );
             }
           } );
 
-          // TODO: Get last point in there as well, so things go smoothly
-          // Maybe last two points?
-          // islandPoints.push( islandPoints[ 0 ] );
-          // islandPoints.push( islandPoints[ 1 ] );
+          for ( let i = 0; i < islandPoints.length - 1; i ++ ) {
+            const current = islandPoints[ i ], next = islandPoints[ i + 1 ];
+            this.#walls.push( new Wall( current.x, current.y, next.x, next.y ) );
+          }
 
           const path = new Path2D();
           islandPoints.forEach( point => path.lineTo( point.x, point.y ) );
           path.closePath();
-          this.#islandPath.addPath( path );
+          this.#path.addPath( path );
         }
 
         left = null;
@@ -193,11 +191,7 @@ export class Level {
 
   draw( ctx ) {
     ctx.fillStyle = 'green';
-    ctx.fill( this.#topPath );
-    ctx.fill( this.#bottomPath );
-
-    ctx.strokeStyle = 'yellow';
-    ctx.stroke( this.#islandPath );
+    ctx.fill( this.#path );
 
     ctx.strokeStyle = 'cyan';
     ctx.stroke( this.#midGuide );
@@ -232,6 +226,7 @@ function getPoints( { cx = 0, cy = 0, width = 1, height = 1, numPoints = 10 } ) 
   const angles = Array.from( Array( numPoints ), ( _, ndx ) => 
     spacing * ( ndx + ( Math.random() - 0.5 ) * 0.5 ) 
   );
+  
   return angles.map( angle => ( {
     x: cx + width  * Math.cos( angle ) * ( 0.5 + 0.5 * Math.random() ),
     y: cy + height * Math.sin( angle ) * ( 0.5 + 0.5 * Math.random() ),
