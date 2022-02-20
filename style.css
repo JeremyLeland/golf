@@ -4,6 +4,7 @@ body {
   user-select: none;  /* Prevent accidental selection while dragging mouse */
 
   background-color: black;
+  color: white;
 }
 
 .center {

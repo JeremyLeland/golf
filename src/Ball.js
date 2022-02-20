@@ -18,9 +18,11 @@ export class Ball {
   }
 
   update( dt ) {
-    this.dy += GRAVITY * dt;
     this.x += this.dx * dt;
     this.y += this.dy * dt;
+
+    // Do this last so our movement matches our collision time predictions
+    this.dy += GRAVITY * dt;
   }
 
   bounceFrom( hit ) {

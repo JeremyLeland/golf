@@ -8,13 +8,14 @@ export class World {
     );
 
     return hits.reduce( 
-      ( closest, nextHit ) => 0 < nextHit.time && nextHit.time < closest.time ? nextHit : closest,
+      ( closest, nextHit ) => -1e-6 < nextHit.time && nextHit.time < closest.time ? nextHit : closest,
       { time: Infinity }
     );
   }
 
   update( { ball, walls, dt } ) {
-    for ( let tries = 0, lastHit; dt > 0 && tries < 10; tries ++ ) {   // don't get stuck forever
+    let lastHit;
+    for ( let tries = 0; dt > 0 && tries < 10; tries ++ ) {   // don't get stuck forever
       const hit = this.getNextHit( ball, walls, lastHit );
 
       if ( hit.time <= dt ) {

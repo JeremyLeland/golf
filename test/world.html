@@ -13,6 +13,7 @@
   const world = new World();
 
   level.spawn( ball );
+  ball.dx = 0.05; // start us moving forwards for now
 
   const game = new Game();
 
@@ -29,19 +30,19 @@
     ball.draw( ctx );
     level.draw( ctx );
 
-    const previewDist = 1000;
-    ctx.beginPath();
-    ctx.moveTo( ball.x, ball.y );
-    ctx.lineTo( ball.x + ball.dx * previewDist, ball.y + ball.dy * previewDist );
-    ctx.strokeStyle = 'yellow';
-    ctx.stroke();
+    // const previewDist = 1000;
+    // ctx.beginPath();
+    // ctx.moveTo( ball.x, ball.y );
+    // ctx.lineTo( ball.x + ball.dx * previewDist, ball.y + ball.dy * previewDist );
+    // ctx.strokeStyle = 'yellow';
+    // ctx.stroke();
 
-    const hit = world.getNextHit( ball, level.getWallsNear( ball ) );
-    ctx.beginPath();
-    ctx.moveTo( ball.x, ball.y );
-    ctx.lineTo( hit.x, hit.y );
-    ctx.strokeStyle = 'red';
-    ctx.stroke();
+    // const hit = world.getNextHit( ball, level.getWallsNear( ball ) );
+    // ctx.beginPath();
+    // ctx.moveTo( ball.x, ball.y );
+    // ctx.lineTo( hit.x, hit.y );
+    // ctx.strokeStyle = 'red';
+    // ctx.stroke();
   };
 
 </script>

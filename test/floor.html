@@ -1,0 +1,60 @@
+<link rel='stylesheet' href='../style.css'>
+
+<style>
+  #debug { position: absolute; }
+</style>
+
+<body>
+  <div id="debug"></div>
+</body>
+
+<script type='module'>
+  import { Game } from '../src/Game.js';
+  import { World } from '../src/World.js';
+  import { Wall } from '../src/Wall.js';
+  import { Ball } from '../src/Ball.js';
+
+  const walls = [
+    new Wall( 0, 50, 50, 100 ),
+    new Wall( 50, 100, 150, 100 ),
+    new Wall( 150, 100, 200, 50 ),
+  ];
+
+  const ball = new Ball();
+  const world = new World();
+
+  ball.x = 100;
+  ball.y = 80;
+  
+  const debug = document.getElementById( 'debug' );
+  const game = new Game();
+
+  game.update = ( dt ) => {
+    if ( game.keysPressed.size > 0 ) {
+      world.update( { ball: ball, walls: walls, dt: dt } );
+    }
+  };
+
+  game.draw = ( ctx ) => {
+    ball.draw( ctx );
+    walls.forEach( wall => wall.draw( ctx ) );
+
+    const previewDist = 1000;
+    ctx.beginPath();
+    ctx.moveTo( ball.x, ball.y );
+    ctx.lineTo( ball.x + ball.dx * previewDist, ball.y + ball.dy * previewDist );
+    ctx.strokeStyle = 'yellow';
+    ctx.stroke();
+
+    const hit = world.getNextHit( ball, walls );
+
+    debug.textContent = `Ball pos: (${ ball.x },${ ball.y }) vel: (${ ball.dx },${ ball.dy })\rHit time: ${ hit.time }`;
+
+    ctx.beginPath();
+    ctx.moveTo( ball.x, ball.y );
+    ctx.lineTo( hit.x, hit.y );
+    ctx.strokeStyle = 'red';
+    ctx.stroke();
+  };
+
+</script>
