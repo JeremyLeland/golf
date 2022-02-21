@@ -1,30 +1,29 @@
 <link rel='stylesheet' href='../style.css'>
 
 <body>
-  <canvas id='canvas' width="900" height="500"></canvas>
+  <canvas id='canvas' width="10000" height="500"></canvas>
 </body>
 
 <script type='module'>
   import { Curve } from '../src/Curve.js';
   import * as Noise from '../lib/noise/2d.js';
 
-  const rand = Noise.makeNoise2D();
+  const noise = Noise.makeNoise2D();
 
   const LEVEL_HEIGHT = 500;
 
   const points = { top: [], mid: [], bottom: [] };
 
-  for ( let i = 0; i < 10; i ++ ) {
-    const x = i * 100;
-    const mid = LEVEL_HEIGHT / 2 + rand( x, i ) * LEVEL_HEIGHT / 3;
+  for ( let i = 0; i < 50; i ++ ) {
+    const x = i * 200;
+    const mid = LEVEL_HEIGHT / 2 + noise( x * 0.01, i ) * LEVEL_HEIGHT / 3;
 
     points.mid.push( { x: x, y: mid } );
 
-    const above = mid;
-    const below = LEVEL_HEIGHT - mid;
+    const radius = Math.min( mid, LEVEL_HEIGHT - mid ) * ( 1 + noise( x * 0.01, 1 ) ) / 2;
 
-    const top    =       above / 2 + rand( x, above ) * above / 3;
-    const bottom = mid + below / 2 + rand( x, below ) * below / 3;
+    const top    = mid - radius;
+    const bottom = mid + radius;
 
     points.top.unshift( { x: x, y: top } );
     points.bottom.push( { x: x, y: bottom } );
@@ -42,8 +41,25 @@
   bottomCurves.forEach( curve => curve.draw( ctx ) );
 
   ctx.beginPath();
-  ctx.moveTo(   0, LEVEL_HEIGHT );
-  ctx.lineTo( 900, LEVEL_HEIGHT );
+  ctx.moveTo(     0, LEVEL_HEIGHT );
+  ctx.lineTo( 10000, LEVEL_HEIGHT );
   ctx.stroke();
+
+  function octaveNoise( x, y, octaves = 1 ) {
+    let total = 0;
+    let frequency = 1;
+    let amplitude = 1;
+    let maxValue = 0;
+
+    for ( let i = 0; i < octaves; i++ ) {
+      total += noise( x * frequency, y * frequency ) * amplitude;
+
+      maxValue += amplitude;
+      amplitude *= 0.5;
+      frequency *= 2.0;
+    }
+
+    return total / maxValue;
+  }
   
 </script>
