@@ -1,0 +1,42 @@
+<link rel='stylesheet' href='../style.css'>
+
+<body></body>
+
+<script type='module'>
+  import { Game } from '../src/Game.js';
+  import { World } from '../src/World.js';
+  import { Wall } from '../src/Wall.js';
+  import { Ball } from '../src/Ball.js';
+
+  const walls = [
+    new Wall( 0, 100, 100, 200 ),
+    new Wall( 100, 200, 200, 200 ),
+    new Wall( 200, 200, 300, 100 ),
+    new Wall( 300, 100, 200, 0 ),
+    new Wall( 200, 0, 100, 0 ),
+    new Wall( 100, 0, 0, 100 ),
+  ];
+
+  const ball = new Ball();
+  const world = new World();
+
+  ball.x = 150;
+  ball.y = 150;
+  
+  const game = new Game();
+
+  game.update = ( dt ) => {
+    world.update( { ball: ball, walls: walls, dt: dt } );
+
+    if ( game.mouseDown ) {
+      ball.dx += 0.001 * ( game.mouseX + game.scrollX - ball.x );
+      ball.dy += 0.001 * ( game.mouseY + game.scrollY - ball.y );
+    }
+  };
+
+  game.draw = ( ctx ) => {
+    ball.draw( ctx );
+    walls.forEach( wall => wall.draw( ctx ) );
+  };
+
+</script>

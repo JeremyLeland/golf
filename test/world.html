@@ -17,13 +17,18 @@
 
   const game = new Game();
 
-  game.scrollX = 300;
+  const SENSITIVITY = 0.001;
 
   game.update = ( dt ) => {
     world.update( { ball: ball, walls: level.getWallsNear( ball ), dt: dt } );
 
     game.scrollX = window.innerWidth / 2 - ball.x;
     game.scrollY = window.innerHeight / 2 - ball.y;
+
+    if ( game.mouseDown ) {
+      ball.dx += SENSITIVITY * ( game.mouseX - game.scrollX - ball.x );
+      ball.dy += SENSITIVITY * ( game.mouseY - game.scrollY - ball.y );
+    }
   };
 
   game.draw = ( ctx ) => {
