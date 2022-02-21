@@ -1,0 +1,49 @@
+<link rel='stylesheet' href='../style.css'>
+
+<body>
+  <canvas id='canvas' width="900" height="500"></canvas>
+</body>
+
+<script type='module'>
+  import { Curve } from '../src/Curve.js';
+  import * as Noise from '../lib/noise/2d.js';
+
+  const rand = Noise.makeNoise2D();
+
+  const LEVEL_HEIGHT = 500;
+
+  const points = { top: [], mid: [], bottom: [] };
+
+  for ( let i = 0; i < 10; i ++ ) {
+    const x = i * 100;
+    const mid = LEVEL_HEIGHT / 2 + rand( x, i ) * LEVEL_HEIGHT / 3;
+
+    points.mid.push( { x: x, y: mid } );
+
+    const above = mid;
+    const below = LEVEL_HEIGHT - mid;
+
+    const top    =       above / 2 + rand( x, above ) * above / 3;
+    const bottom = mid + below / 2 + rand( x, below ) * below / 3;
+
+    points.top.unshift( { x: x, y: top } );
+    points.bottom.push( { x: x, y: bottom } );
+  }
+
+  const topCurves = Curve.getCurvesThroughPoints( points.top );
+  const midCurves = Curve.getCurvesThroughPoints( points.mid );
+  const bottomCurves = Curve.getCurvesThroughPoints( points.bottom );
+
+  const canvas = document.getElementById( 'canvas' );
+  const ctx = canvas.getContext( '2d' );
+
+  topCurves.forEach( curve => curve.draw( ctx ) );
+  midCurves.forEach( curve => curve.draw( ctx ) );
+  bottomCurves.forEach( curve => curve.draw( ctx ) );
+
+  ctx.beginPath();
+  ctx.moveTo(   0, LEVEL_HEIGHT );
+  ctx.lineTo( 900, LEVEL_HEIGHT );
+  ctx.stroke();
+  
+</script>
