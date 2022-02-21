@@ -23,7 +23,7 @@
     world.update( { ball: ball, walls: level.getWallsNear( ball ), dt: dt } );
 
     game.scrollX = window.innerWidth / 2 - ball.x;
-    game.scrollY = window.innerHeight / 2 - ball.y;
+    //game.scrollY = window.innerHeight / 2 - ball.y;
 
     if ( game.mouseDown ) {
       ball.dx += SENSITIVITY * ( game.mouseX - game.scrollX - ball.x );

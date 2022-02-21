@@ -1,4 +1,4 @@
-const GRAVITY = 0.0001;
+const GRAVITY = 0.0005;
 
 export class Ball {
   x = 0;
@@ -26,7 +26,7 @@ export class Ball {
   }
 
   bounceFrom( hit ) {
-    const f = 0.9, r = 0.5;
+    const f = 0.8, r = 0.5;
 
     const vDotN = ( this.dx * hit.normal.x + this.dy * hit.normal.y );
 

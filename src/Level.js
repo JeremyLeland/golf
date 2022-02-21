@@ -2,7 +2,7 @@ import { Wall } from './Wall.js';
 import { Curve } from './Curve.js'
 
 const LEVEL_HEIGHT = 900;
-const FLAG_WIDTH = 5, FLAG_HEIGHT = 10;
+const FLAG_WIDTH = 10, FLAG_HEIGHT = 20;
 
 const ISLAND_MIN_WIDTH = 100, ISLAND_MAX_WIDTH = 300;
 
@@ -102,7 +102,7 @@ export class Level {
 
     // Generate some islands in open spaces
     let left, right, upper, lower;
-    for ( let i = 0; i < this.#topPoints.length - 1; i += 3 ) {
+    for ( let i = 0; i < this.#topPoints.length - 1; i ++ ) {
       const top = this.#topPoints[ i ], bottom = this.#bottomPoints[ i ];
 
       // Trying to break up islands...maybe we need an island min and max width?
@@ -163,6 +163,11 @@ export class Level {
         // const islandMid = ( top.y + bottom.y ) / 2;
         // const islandTop    = islandMid - 0.5 * Math.random() * deltaY;
         // const islandBottom = islandMid + 0.5 * Math.random() * deltaY;
+    }
+
+    for ( let i = 30; i < this.#bottomPoints.length - 1; i += 30 ) {
+      // TODO: Only place flag if ground is flat
+      this.#flags.push( this.#bottomPoints[ i ] );
     }
     
     // Show normals (debug)
