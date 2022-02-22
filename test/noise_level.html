@@ -9,6 +9,33 @@
   import { Wall } from '../src/Wall.js';
   import * as Noise from '../lib/noise/2d.js';
 
+  class Flag {
+    x;
+    y;
+
+    static #pole = new Path2D( 'M 0 0 V -1 H 0.1 V 0' );
+    static #flag = new Path2D( 'M 0 -1 L 1 -0.75 L 0 -0.5' );
+
+    constructor( x, y ) {
+      this.x = x;
+      this.y = y;
+    }
+
+    draw( ctx ) {
+      ctx.save();
+
+      ctx.translate( this.x, this.y );
+      ctx.scale( 10, 20 );
+
+      ctx.fillStyle = 'white';
+      ctx.fill( Flag.#pole );
+      ctx.fillStyle = 'red';
+      ctx.fill( Flag.#flag );
+
+      ctx.restore();
+    }
+  }
+
   const noise = Noise.makeNoise2D();
 
   const LEVEL_HEIGHT = 500;
@@ -38,15 +65,32 @@
   const ctx = canvas.getContext( '2d' );
 
   // topCurves.forEach( curve => curve.draw( ctx ) );
-  // midCurves.forEach( curve => curve.draw( ctx ) );
+  midCurves.forEach( curve => curve.draw( ctx ) );
   // bottomCurves.forEach( curve => curve.draw( ctx ) );
 
   // Draw altered points, or just make walls from them
-  const walls = getWallsFromPoints( getAlteredPoints( topCurves ) ).concat(
-    getWallsFromPoints( getAlteredPoints( bottomCurves ) )
-  );
+  const topWalls = getWallsFromPoints( getAlteredPoints( topCurves ) );
+  const bottomWalls = getWallsFromPoints( getAlteredPoints( bottomCurves ) );
+
+  const walls = topWalls.concat( bottomWalls );
 
   walls.forEach( wall => wall.draw( ctx ) );
+
+  // Find flattest points for flags
+  const flags = [];
+
+  for ( let i = 1; i < bottomWalls.length - 1; i ++ ) {
+    const prev = bottomWalls[ i - 1 ];
+    const current = bottomWalls[ i ];
+    const next = bottomWalls[ i + 1 ];
+
+    if ( current.normal.y < -0.99 && 
+         current.normal.y < prev.normal.y && current.normal.y < next.normal.y ) {
+      flags.push( new Flag( current.x1, current.y1 ) );
+    }
+  }
+
+  flags.forEach( flag => flag.draw( ctx ) );
 
   ctx.beginPath();
   ctx.moveTo(     0, LEVEL_HEIGHT );
@@ -73,7 +117,7 @@
     return points;
   }
 
-  // TODO: Loop, reverse
+  // TODO: Loop, reverse?
   function getWallsFromPoints( points ) {
     const walls = [];
 
