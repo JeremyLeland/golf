@@ -6,6 +6,7 @@
 
 <script type='module'>
   import { Curve } from '../src/Curve.js';
+  import { Wall } from '../src/Wall.js';
   import * as Noise from '../lib/noise/2d.js';
 
   const noise = Noise.makeNoise2D();
@@ -14,8 +15,8 @@
 
   const points = { top: [], mid: [], bottom: [] };
 
-  for ( let i = 0; i < 50; i ++ ) {
-    const x = i * 200;
+  for ( let i = 0; i < 20; i ++ ) {
+    const x = i * 400;
     const mid = LEVEL_HEIGHT / 2 + noise( x * 0.01, i ) * LEVEL_HEIGHT / 3;
 
     points.mid.push( { x: x, y: mid } );
@@ -36,16 +37,55 @@
   const canvas = document.getElementById( 'canvas' );
   const ctx = canvas.getContext( '2d' );
 
-  topCurves.forEach( curve => curve.draw( ctx ) );
-  midCurves.forEach( curve => curve.draw( ctx ) );
-  bottomCurves.forEach( curve => curve.draw( ctx ) );
+  // topCurves.forEach( curve => curve.draw( ctx ) );
+  // midCurves.forEach( curve => curve.draw( ctx ) );
+  // bottomCurves.forEach( curve => curve.draw( ctx ) );
+
+  // Draw altered points, or just make walls from them
+  const walls = getWallsFromPoints( getAlteredPoints( topCurves ) ).concat(
+    getWallsFromPoints( getAlteredPoints( bottomCurves ) )
+  );
+
+  walls.forEach( wall => wall.draw( ctx ) );
 
   ctx.beginPath();
   ctx.moveTo(     0, LEVEL_HEIGHT );
   ctx.lineTo( 10000, LEVEL_HEIGHT );
   ctx.stroke();
 
-  function octaveNoise( x, y, octaves = 1 ) {
+  function getAlteredPoints( curves ) {
+    const points = [];
+
+    curves.forEach( curve => {
+      for ( let t = 0; t <= 1; t += 0.05 ) {
+        const pos = curve.getPosition( t );
+        const norm = curve.getNormal( t );
+
+        const offset = 10 * Math.sin( t * Math.PI * 2 * 4321 );
+
+        points.push( { 
+          x: pos.x + norm.x * offset,
+          y: pos.y + norm.y * offset,
+        } );
+      }
+    } );
+
+    return points;
+  }
+
+  // TODO: Loop, reverse
+  function getWallsFromPoints( points ) {
+    const walls = [];
+
+    for ( let i = 0; i < points.length - 1; i ++ ) {
+      const current = points[ i ], next = points[ i + 1 ];
+      walls.push( new Wall( current.x, current.y, next.x, next.y ) );
+    }
+
+    return walls;
+  }
+
+  function octaveNoise( x, y, octaves = 10 ) {
     let total = 0;
     let frequency = 1;
     let amplitude = 1;
