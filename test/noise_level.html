@@ -12,13 +12,15 @@
   class Flag {
     x;
     y;
+    wall;
 
     static #pole = new Path2D( 'M 0 0 V -1 H 0.1 V 0' );
     static #flag = new Path2D( 'M 0 -1 L 1 -0.75 L 0 -0.5' );
 
-    constructor( x, y ) {
-      this.x = x;
-      this.y = y;
+    constructor( wall ) {
+      this.x = wall.x2;
+      this.y = wall.y2;
+      this.wall = wall;
     }
 
     draw( ctx ) {
@@ -39,6 +41,7 @@
   const noise = Noise.makeNoise2D();
 
   const LEVEL_HEIGHT = 500;
+  const HOLE_WIDTH = 20, HOLE_DEPTH = 20;
 
   const points = { top: [], mid: [], bottom: [] };
 
@@ -65,17 +68,13 @@
   const ctx = canvas.getContext( '2d' );
 
   // topCurves.forEach( curve => curve.draw( ctx ) );
-  midCurves.forEach( curve => curve.draw( ctx ) );
+  // midCurves.forEach( curve => curve.draw( ctx ) );
   // bottomCurves.forEach( curve => curve.draw( ctx ) );
 
   // Draw altered points, or just make walls from them
   const topWalls = getWallsFromPoints( getAlteredPoints( topCurves ) );
   const bottomWalls = getWallsFromPoints( getAlteredPoints( bottomCurves ) );
-
-  const walls = topWalls.concat( bottomWalls );
-
-  walls.forEach( wall => wall.draw( ctx ) );
-
+  
   // Find flattest points for flags
   const flags = [];
 
@@ -86,10 +85,28 @@
 
     if ( current.normal.y < -0.99 && 
          current.normal.y < prev.normal.y && current.normal.y < next.normal.y ) {
-      flags.push( new Flag( current.x1, current.y1 ) );
+      flags.push( new Flag( current ) );
     }
   }
 
+  flags.forEach( flag => {
+    const current = flag.wall;
+    const index = bottomWalls.indexOf( current );
+    
+    const bottomY = Math.min( current.y1, current.y2 ) + HOLE_DEPTH;
+
+    const left = new Wall( current.x1, current.y1, current.x1, bottomY );
+    const right = new Wall( current.x2, bottomY, current.x2, current.y2 );
+    current.y1 = bottomY;
+    current.y2 = bottomY;
+
+    bottomWalls.splice( index + 1, 0, right );
+    bottomWalls.splice( index, 0, left );
+  } );
+
+
+  const walls = topWalls.concat( bottomWalls );
+  walls.forEach( wall => wall.draw( ctx ) );
   flags.forEach( flag => flag.draw( ctx ) );
 
   ctx.beginPath();
