@@ -45,6 +45,8 @@ export class Level {
   #walls = [];
   #flags = [];
 
+  #path = new Path2D();
+
   constructor() {
     const points = { top: [], mid: [], bottom: [] };
 
@@ -96,7 +98,9 @@ export class Level {
       bottomWalls.splice( index + 1, 0, right );
       bottomWalls.splice( index, 0, left );
     } );
-    
+
+    this.#path.addPath( getPathFromWalls( topWalls, 0 ) );
+    this.#path.addPath( getPathFromWalls( bottomWalls, LEVEL_HEIGHT ) );
     
     this.#walls = topWalls.concat( bottomWalls );
   }
@@ -116,6 +120,9 @@ export class Level {
   }
 
   draw( ctx ) {
+    ctx.fillStyle = 'green';
+    ctx.fill( this.#path );
+
     this.#walls.forEach( wall => wall.draw( ctx ) );
     this.#flags.forEach( flag => flag.draw( ctx ) );
   }
@@ -124,11 +131,12 @@ export class Level {
 
 
 
-function getAlteredPoints( curves ) {
+function getAlteredPoints( curves, numPoints = 20 ) {
   const points = [];
 
   curves.forEach( curve => {
-    for ( let t = 0; t <= 1; t += 0.05 ) {
+    for ( let i = 0; i < numPoints; i ++ ) {
+      const t = i / numPoints;
       const pos = curve.getPosition( t );
       const norm = curve.getNormal( t );
 
@@ -154,6 +162,19 @@ function getWallsFromPoints( points ) {
   }
 
   return walls;
+}
+
+function getPathFromWalls( walls, baseY ) {
+  const path = new Path2D();
+
+  const first = walls[ 0 ], last = walls[ walls.length - 1 ];
+  path.lineTo( first.x1, baseY );
+  path.lineTo( first.x1, first.y1 );
+  walls.forEach( wall => path.lineTo( wall.x2, wall.y2 ) );
+  path.lineTo( last.x2, baseY );
+  path.closePath();
+
+  return path;
 }
 
 function getPoints( { cx = 0, cy = 0, width = 1, height = 1, numPoints = 10 } ) {
