@@ -36,7 +36,7 @@ class Flag {
 
 const noise = Noise.makeNoise2D();
 
-const LEVEL_HEIGHT = 500; // 900
+const LEVEL_HEIGHT = 900
 const HOLE_WIDTH = 20, HOLE_DEPTH = 20;
 const ISLAND_MIN_WIDTH = 100, ISLAND_MAX_WIDTH = 300;
 
@@ -129,27 +129,30 @@ export class Level {
 }
 
 
-
-
-function getAlteredPoints( curves, numPoints = 20 ) {
+function getAlteredPoints( curves ) {
   const points = [];
 
   curves.forEach( curve => {
-    for ( let i = 0; i < numPoints; i ++ ) {
-      const t = i / numPoints;
-      const pos = curve.getPosition( t );
-      const norm = curve.getNormal( t );
-
-      const offset = 10 * Math.sin( t * Math.PI * 2 * 4321 );
-
-      points.push( { 
-        x: pos.x + norm.x * offset,
-        y: pos.y + norm.y * offset,
-      } );
+    for ( let t = 0; t < 1; t += 0.05 ) {
+      points.push( getAlteredPoint( curve, t ) );
     }
   } );
 
+  points.push( getAlteredPoint( curves[ curves.length - 1 ], 1 ) );
+
   return points;
+}
+
+function getAlteredPoint( curve, t ) {
+  const pos = curve.getPosition( t );
+  const norm = curve.getNormal( t );
+
+  const offset = 10 * Math.sin( t * Math.PI * 2 * 4321 );
+
+  return { 
+    x: pos.x + norm.x * offset,
+    y: pos.y + norm.y * offset,
+  };
 }
 
 // TODO: Loop, reverse?
