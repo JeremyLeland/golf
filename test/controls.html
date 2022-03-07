@@ -8,6 +8,8 @@
   import { Wall } from '../src/Wall.js';
   import { Ball } from '../src/Ball.js';
 
+  const SENSITIVITY = 0.001;
+
   const walls = [
     new Wall( 0, 100, 100, 200 ),
     new Wall( 100, 200, 200, 200 ),
@@ -25,16 +27,38 @@
   
   const game = new Game();
 
+  let aimAngle, aimDist;
+
   game.update = ( dt ) => {
     world.update( { ball: ball, walls: walls, dt: dt } );
 
+    const cx = game.mouseX - game.scrollX - ball.x;
+    const cy = game.mouseY - game.scrollY - ball.y;
+
+    aimAngle = Math.atan2( cy, cx );
+    aimDist  = Math.hypot( cx, cy );
+    
     if ( game.mouseDown ) {
-      ball.dx += 0.001 * ( game.mouseX + game.scrollX - ball.x );
-      ball.dy += 0.001 * ( game.mouseY + game.scrollY - ball.y );
+      ball.dx += SENSITIVITY * Math.cos( aimAngle ) * aimDist;
+      ball.dy += SENSITIVITY * Math.sin( aimAngle ) * aimDist;
     }
   };
 
   game.draw = ( ctx ) => {
+    const cos = Math.cos( aimAngle ), sin = Math.sin( aimAngle );
+    ctx.beginPath();
+    ctx.lineTo( ball.x - sin * ball.size, ball.y + cos * ball.size );
+    ctx.lineTo( ball.x + sin * ball.size, ball.y - cos * ball.size );
+    ctx.lineTo( ball.x + cos * aimDist, ball.y + sin * aimDist );
+    ctx.closePath();
+
+    const gradient = ctx.createRadialGradient( ball.x, ball.y, 0, ball.x, ball.y, 100 );
+    gradient.addColorStop( 0, 'green' );
+    gradient.addColorStop( 0.5, 'yellow' );
+    gradient.addColorStop( 1, 'red' );
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
     ball.draw( ctx );
     walls.forEach( wall => wall.draw( ctx ) );
   };
