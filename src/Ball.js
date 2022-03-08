@@ -1,5 +1,7 @@
 const GRAVITY = 0.0005;
 
+const REST_SPEED = 0.1, REST_TIME = 1500;
+
 export class Ball {
   x = 0;
   y = 0;
@@ -9,6 +11,8 @@ export class Ball {
   fillStyle = 'white';
 
   #path = new Path2D();
+
+  #timeSinceMovement = 0;
 
   constructor( x, y ) {
     this.x = x;
@@ -21,8 +25,18 @@ export class Ball {
     this.x += this.dx * dt;
     this.y += this.dy * dt;
 
+    this.#timeSinceMovement += dt;
+    if ( REST_SPEED < Math.abs( this.dx ) || 
+         REST_SPEED < Math.abs( this.dy ) ) {
+      this.#timeSinceMovement = 0;
+    }
+
     // Do this last so our movement matches our collision time predictions
     this.dy += GRAVITY * dt;
+  }
+
+  isAtRest() {
+    return REST_TIME < this.#timeSinceMovement;
   }
 
   bounceFrom( hit ) {
