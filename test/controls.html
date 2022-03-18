@@ -10,7 +10,8 @@
   import { Wall } from '../src/Wall.js';
   import { Ball } from '../src/Ball.js';
 
-  const SENSITIVITY = 0.001;
+  const HIT_SENSITIVITY = 0.004;
+  const MAX_HIT = 100;
 
   const walls = [
     new Wall( 0, 100, 100, 200 ),
@@ -27,7 +28,7 @@
   ball.x = 150;
   ball.y = 150;
   
-  const debug = document.getElementById( 'debug' );
+  // const debug = document.getElementById( 'debug' );
   const game = new Game();
 
   let aimAngle, aimDist;
@@ -35,40 +36,46 @@
   game.update = ( dt ) => {
     world.update( { ball: ball, walls: walls, dt: dt } );
 
-    const cx = game.mouseX - game.scrollX - ball.x;
-    const cy = game.mouseY - game.scrollY - ball.y;
+    if ( ball.isAtRest() ) {
+      const cx = game.mouseX - game.scrollX - ball.x;
+      const cy = game.mouseY - game.scrollY - ball.y;
 
-    aimAngle = Math.atan2( cy, cx );
-    aimDist  = Math.hypot( cx, cy );
-    
-    if ( game.mouseDown ) {
-      ball.dx += SENSITIVITY * Math.cos( aimAngle ) * aimDist;
-      ball.dy += SENSITIVITY * Math.sin( aimAngle ) * aimDist;
+      aimAngle = Math.atan2( cy, cx );
+      aimDist  = Math.min( MAX_HIT, Math.hypot( cx, cy ) );
+
+      if ( game.mouseDown ) {
+        ball.dx += HIT_SENSITIVITY * Math.cos( aimAngle ) * aimDist;
+        ball.dy += HIT_SENSITIVITY * Math.sin( aimAngle ) * aimDist;
+      }
     }
   };
 
   game.draw = ( ctx ) => {
 
-    debug.innerHTML = `dx: ${ ball.dx }<br>dy: ${ ball.dy })`;
+    // debug.innerHTML = `dx: ${ ball.dx }<br>dy: ${ ball.dy })`;
 
     if ( ball.isAtRest() ) { 
-      const cos = Math.cos( aimAngle ), sin = Math.sin( aimAngle );
-      ctx.beginPath();
-      ctx.lineTo( ball.x - sin * ball.size, ball.y + cos * ball.size );
-      ctx.lineTo( ball.x + sin * ball.size, ball.y - cos * ball.size );
-      ctx.lineTo( ball.x + cos * aimDist, ball.y + sin * aimDist );
-      ctx.closePath();
-      
-      const gradient = ctx.createRadialGradient( ball.x, ball.y, 0, ball.x, ball.y, 100 );
-      gradient.addColorStop( 0, 'green' );
-      gradient.addColorStop( 0.5, 'yellow' );
-      gradient.addColorStop( 1, 'red' );
-      ctx.fillStyle = gradient;
-      ctx.fill();
+      drawAimer( ctx, ball, aimAngle, aimDist );
     }
       
     ball.draw( ctx );
     walls.forEach( wall => wall.draw( ctx ) );
   };
+
+  function drawAimer( ctx, ball, angle, dist ) {
+    const cos = Math.cos( angle ), sin = Math.sin( angle );
+    ctx.beginPath();
+    ctx.lineTo( ball.x - sin * ball.size, ball.y + cos * ball.size );
+    ctx.lineTo( ball.x + sin * ball.size, ball.y - cos * ball.size );
+    ctx.lineTo( ball.x + cos * dist, ball.y + sin * dist );
+    ctx.closePath();
+    
+    const gradient = ctx.createRadialGradient( ball.x, ball.y, 0, ball.x, ball.y, MAX_HIT * 0.75 );
+    gradient.addColorStop( 0, 'green' );
+    gradient.addColorStop( 0.5, 'yellow' );
+    gradient.addColorStop( 1, 'red' );
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
 
 </script>
