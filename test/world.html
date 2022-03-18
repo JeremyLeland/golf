@@ -25,9 +25,12 @@
     game.scrollX = window.innerWidth / 2 - ball.x;
     //game.scrollY = window.innerHeight / 2 - ball.y;
 
-    if ( game.mouseDown ) {
-      ball.dx += SENSITIVITY * ( game.mouseX - game.scrollX - ball.x );
-      ball.dy += SENSITIVITY * ( game.mouseY - game.scrollY - ball.y );
+    if ( ball.isAtRest() ) {
+      ball.aimAt( game.mouseX - game.scrollX, game.mouseY - game.scrollY );
+
+      if ( game.mouseDown ) {
+        ball.hit();
+      }
     }
   };
 
