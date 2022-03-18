@@ -1,6 +1,7 @@
 const GRAVITY = 0.0005;
 
 const REST_SPEED = 0.1, REST_TIME = 1500;
+const HIT_SENSITIVITY = 0.004, MAX_HIT = 100;
 
 export class Ball {
   x = 0;
@@ -13,6 +14,9 @@ export class Ball {
   #path = new Path2D();
 
   #timeSinceMovement = 0;
+
+  #aimAngle = 0;
+  #aimDist = 0;
 
   constructor( x, y ) {
     this.x = x;
@@ -39,6 +43,19 @@ export class Ball {
     return REST_TIME < this.#timeSinceMovement;
   }
 
+  aimAt( x, y ) {
+    const cx = x - this.x;
+    const cy = y - this.y;
+
+    this.#aimAngle = Math.atan2( cy, cx );
+    this.#aimDist  = Math.min( MAX_HIT, Math.hypot( cx, cy ) );
+  }
+
+  hit() {
+    this.dx += HIT_SENSITIVITY * Math.cos( this.#aimAngle ) * this.#aimDist;
+    this.dy += HIT_SENSITIVITY * Math.sin( this.#aimAngle ) * this.#aimDist;
+  }
+
   bounceFrom( hit ) {
     const f = 0.8, r = 0.5;
 
@@ -56,6 +73,24 @@ export class Ball {
 
     ctx.translate( this.x, this.y );
 
+    // Aimer
+    if ( this.isAtRest() ) {
+      const cos = Math.cos( this.#aimAngle ), sin = Math.sin( this.#aimAngle );
+      ctx.beginPath();
+      ctx.lineTo( -sin * this.size,  cos * this.size );
+      ctx.lineTo(  sin * this.size, -cos * this.size );
+      ctx.lineTo(  cos * this.#aimDist, sin * this.#aimDist );
+      ctx.closePath();
+      
+      const gradient = ctx.createRadialGradient( 0, 0, 0, 0, 0, MAX_HIT * 0.75 );
+      gradient.addColorStop( 0, 'green' );
+      gradient.addColorStop( 0.5, 'yellow' );
+      gradient.addColorStop( 1, 'red' );
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    }
+
+    // Ball itself
     ctx.fillStyle = this.fillStyle;
     ctx.fill( this.#path );
     ctx.strokeStyle = 'black';
