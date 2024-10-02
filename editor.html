@@ -1,0 +1,628 @@
+<title>Golf Editor</title>
+<link rel="stylesheet" href="./style.css">
+
+<style>
+  #canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: -1;
+  }
+</style>
+
+<canvas id="canvas"></canvas>
+<button id="play">Play</button>
+<button id="save">Save</button>
+<button id="load">Load</button>
+<button id="undo">Undo</button>
+<button id="clear">Clear</button>
+
+<script type="module">
+  import { Canvas } from './src/Canvas.js';
+  import { World } from './src/World.js';
+  import * as Level from './src/Level.js';
+  import { Line } from './src/Line.js';
+
+  const EditorStateKey = 'golfEditorState';
+
+  const EditType = {
+    AddPoint: 'AddPoint',
+    MovePoint: 'MovePoint',
+    DeletePoint: 'DeletePoint',
+    AddLoop: 'AddLoop',
+    MoveLoop: 'MoveLoop',
+    ResizeLoop: 'ResizeLoop',
+    RotateLoop: 'RotateLoop',
+    DeleteLoop: 'DeleteLoop',
+  };
+
+  const HoverType = {
+    Loop: 'Loop',
+    Point: 'Point',
+    Edge: 'Edge',
+    Resize: 'Resize',
+  };
+
+  const Mode = {
+    Edit: 'Edit',
+    Play: 'Play',
+  };
+
+  let mode = Mode.Edit;
+
+  let editorState = JSON.parse( localStorage.getItem( EditorStateKey ) ) ?? newEditorState();
+  function newEditorState( levelJson ) {
+    return {
+      level: levelJson ?? Level.newLevel(),
+      undoStack: [],
+      selectedIndex: null,
+    }
+  }
+
+  let world;
+  
+  const POINT_RADIUS = 0.06;
+
+  let hover;
+  let active;
+
+  const SIZE = 16;
+  const canvas = new Canvas( document.getElementById( 'canvas' ) );
+  canvas.zoom = 1 / SIZE;
+  canvas.scrollX = SIZE / 2;
+  canvas.scrollY = SIZE / 2;
+  
+  canvas.update = ( dt ) => {
+    world.update( dt );
+  }
+
+  canvas.draw = ( ctx ) => {
+    if ( mode == Mode.Edit ) {
+      // Loops
+      ctx.fillStyle = 'green';
+      editorState.level.loops.forEach( loop => {
+        ctx.beginPath();
+        loop.forEach( p => ctx.lineTo( p[ 0 ], p[ 1 ] ) );
+        ctx.fill();
+      } );
+      
+      // Bounds
+      if ( editorState.selectedIndex != null ) {
+        const boundsInfo = getBoundsInfo( getBounds( editorState.level.loops[ editorState.selectedIndex ] ) );
+        
+        ctx.fillStyle = ctx.strokeStyle = '#fffa';
+
+        ctx.setLineDash( [ 0.1, 0.1 ] );
+        ctx.beginPath();
+        boundsInfo.edges.forEach( e => {
+          ctx.moveTo( e[ 0 ], e[ 1 ] );
+          ctx.lineTo( e[ 2 ], e[ 3 ] );
+        } );
+        ctx.stroke();
+        ctx.setLineDash( [] );
+
+        ctx.beginPath();
+        boundsInfo.points.forEach( p => {
+          drawPoint( ctx, p, POINT_RADIUS );
+        } );
+        ctx.fill();
+      }
+
+      if ( active?.dragStart ) {
+        ctx.setLineDash( [ 0.1, 0.1 ] );
+
+        ctx.strokeStyle = 'lime';
+        ctx.strokeRect(
+          active.dragStart[ 0 ], 
+          active.dragStart[ 1 ], 
+          mouse.x - active.dragStart[ 0 ], 
+          mouse.y - active.dragStart[ 1 ], 
+        );
+
+        ctx.setLineDash( [] );
+      }
+
+      // Points
+      ctx.fillStyle = '#fffa';
+      ctx.beginPath();
+      editorState.level.loops.forEach( loop => {
+        loop.forEach( p => {
+          drawPoint( ctx, p, POINT_RADIUS );
+        } );
+      } );
+      ctx.fill();
+
+      if ( hover ) {
+        ctx.fillStyle = hover.type == HoverType.Point ? 'yellow' : 'lime';
+
+        ctx.beginPath();
+
+        if ( hover.point ) {
+          drawPoint( ctx, hover.point, POINT_RADIUS * 2 );
+        }
+        else if ( hover.pointIndex != null ) {
+          drawPoint( ctx, editorState.level.loops[ hover.loopIndex ][ hover.pointIndex ], POINT_RADIUS * 2 );
+        }
+        
+        ctx.fill();  
+      }
+
+      localStorage.setItem( EditorStateKey, JSON.stringify( editorState ) );
+    }
+    else if ( mode == Mode.Play ) {
+      world.draw( ctx );
+    }    
+  }
+
+  canvas.redraw();
+  
+  // TODO: Shouldn't need this in two places
+  //       Can I move all the code that uses this to Level?
+  function getBounds( loop ) {
+    const bounds = {};
+
+    loop.forEach( p => {
+      bounds.left   = Math.min( p[ 0 ], bounds.left   ?? p[ 0 ] );
+      bounds.right  = Math.max( p[ 0 ], bounds.right  ?? p[ 0 ] );
+      bounds.top    = Math.min( p[ 1 ], bounds.top    ?? p[ 1 ] );
+      bounds.bottom = Math.max( p[ 1 ], bounds.bottom ?? p[ 1 ] );
+    } );
+
+    return bounds;
+  }
+
+  function getBoundsInfo( bounds ) {
+    const points = [
+      [ bounds.left,  bounds.top    ],
+      [ bounds.right, bounds.top    ],
+      [ bounds.right, bounds.bottom ],
+      [ bounds.left,  bounds.bottom ],
+    ];
+
+    const edges = [
+      [ ...points[ 0 ], ...points[ 1 ] ],
+      [ ...points[ 1 ], ...points[ 2 ] ],
+      [ ...points[ 2 ], ...points[ 3 ] ],
+      [ ...points[ 3 ], ...points[ 0 ] ],
+    ];
+
+    return {
+      points: points,
+      edges: edges,
+    };
+  }
+  
+  function drawPoint( ctx, p, radius ) {
+    ctx.moveTo( p[ 0 ], p[ 1 ] );
+    ctx.arc( p[ 0 ], p[ 1 ], radius, 0, Math.PI * 2 );
+  }
+
+
+  // TODO: Undo/Redo (requires serializing operations: move, resize, delete, etc)
+
+  let mouse = {
+    x: 0,
+    y: 0,
+  };
+
+  let spawnStart;
+
+  canvas.canvas.addEventListener( 'pointerdown', e => {
+    mouse.x = canvas.getPointerX( e );
+    mouse.y = canvas.getPointerY( e );
+
+    if ( mode == Mode.Edit ) {
+      hover = null;
+
+      const under = getHoverUnder( mouse.x, mouse.y );
+
+      if ( !under ) {
+        if ( e.buttons & 1 ) {
+          active = {
+            type: 'AddLoop',
+            loopIndex: editorState.level.loops.length,
+            dragStart: [ mouse.x, mouse.y ],
+          }
+        }
+      }
+      else if ( under.type == HoverType.Loop ) {
+        editorState.selectedIndex = null;
+
+        if ( e.buttons & 1 ) {
+          editorState.selectedIndex = under.loopIndex;
+          
+          active = {
+            type: 'MoveLoop',
+            loopIndex: under.loopIndex,
+            dx: 0,
+            dy: 0,
+          };
+        }
+        else if ( e.buttons & 2 ) {
+          active = {
+            type: 'DeleteLoop',
+            loopIndex: under.loopIndex,
+            points: editorState.level.loops[ under.loopIndex ],   // save for undo
+          };
+
+          applyCommand( active );
+
+          active = null;
+        }
+      }
+      else if ( under.type == HoverType.Edge ) {
+        if ( e.buttons & 1 ) {
+          active = {
+            type: 'AddPoint',
+            loopIndex: under.loopIndex,
+            pointIndex: under.pointIndex,
+            point: under.point,
+          }
+
+          applyCommand( active );
+          
+          active = {
+            type: 'MovePoint',
+            loopIndex: under.loopIndex,
+            pointIndex: under.pointIndex,
+            dx: 0,
+            dy: 0,
+          }
+        }
+        else {
+          active = null;
+        }
+      }
+      else if ( under.type == HoverType.Point ) {
+        if ( e.buttons & 1 ) {
+          active = {
+            type: 'MovePoint',
+            loopIndex: under.loopIndex,
+            pointIndex: under.pointIndex,
+            dx: 0,
+            dy: 0,
+          }
+        }
+        else if ( e.buttons & 2 ) {
+          active = {
+            type: 'DeletePoint',
+            loopIndex: under.loopIndex,
+            pointIndex: under.pointIndex,
+            point: editorState.level.loops[ under.loopIndex ][ under.pointIndex ],  // save for undo
+          }
+
+          applyCommand( active );
+
+          active = null;
+        }
+      }
+      else if ( under.type == HoverType.Resize ) {
+        active = {
+          type: 'ResizeLoop',
+          loopIndex: under.loopIndex,
+          resizeType: under.resizeType,
+          dx: 0,
+          dy: 0,
+        }
+      }
+
+      canvas.redraw();
+    }
+    else if ( mode == Mode.Play ) {
+      spawnStart = {
+        x: mouse.x,
+        y: mouse.y
+      };
+    }
+  } );
+
+  canvas.canvas.addEventListener( 'pointermove', e => {
+    const lastX = mouse.x;
+    const lastY = mouse.y;
+    mouse.x = canvas.getPointerX( e );
+    mouse.y = canvas.getPointerY( e );
+    const moveX = mouse.x - lastX;
+    const moveY = mouse.y - lastY;
+
+    if ( mode == Mode.Edit ) {
+      // Move active points (or resize)
+      if ( active ) {
+        if ( active.type == 'AddLoop' ) {
+          // special case, don't do the dx/dy or apply
+        }
+        else {
+          active.dx = moveX;
+          active.dy = moveY;
+          
+          applyCommand( active );
+        }
+      }
+
+      // Hover
+      else {
+        hover = getHoverUnder( mouse.x, mouse.y );
+      }
+
+      canvas.redraw();
+    }
+    else if ( mode == Mode.Play ) {
+    }
+  } );
+
+  canvas.canvas.addEventListener( 'pointerup', e => {
+    if ( mode == Mode.Edit ) {
+      if ( active ) {
+        if ( active.type == EditType.AddLoop ) {
+          const left   = Math.min( active.dragStart[ 0 ], mouse.x );
+          const right  = Math.max( active.dragStart[ 0 ], mouse.x );
+          const top    = Math.min( active.dragStart[ 1 ], mouse.y );
+          const bottom = Math.max( active.dragStart[ 1 ], mouse.y );
+
+          if ( left != right && top != bottom ) { 
+            active.points = makeLoop( left, top, right, bottom );
+
+            applyCommand( active );
+
+            editorState.selectedIndex = active.loopIndex;
+          }
+        }
+
+        active = null;
+      }
+
+      canvas.redraw();
+    }
+    else if ( mode == Mode.Play ) {
+      const VEL = 0.01;
+
+      Object.assign( world.player, {
+        x: spawnStart.x,
+        y: spawnStart.y,
+        dx: VEL * ( mouse.x - spawnStart.x ),
+        dy: VEL * ( mouse.y - spawnStart.y ),
+      } );
+    }
+  } );
+
+  document.addEventListener( 'wheel', e => {
+    // TODO: Add to existing rotate command, stop other commands?
+    const under = getHoverUnder( mouse.x, mouse.y );
+
+    if ( under?.type == HoverType.Loop ) {
+      active = {
+        type: 'RotateLoop',
+        loopIndex: under.loopIndex,
+        x: mouse.x,
+        y: mouse.y,
+        angle: -0.1 * Math.sign( e.wheelDelta ),
+      }
+
+      applyCommand( active );
+
+      active = null;
+    }
+
+    canvas.redraw();
+  } );
+
+  function applyCommand( cmd ) {
+    console.log( 'Applying: ' + JSON.stringify( cmd ) );
+    Level.applyCommand( editorState.level, cmd );
+
+    const lastCmd = editorState.undoStack[ editorState.undoStack.length - 1 ];
+
+    if ( lastCmd == null ||
+         cmd.type != lastCmd.type || 
+         cmd.loopIndex != lastCmd.loopIndex || 
+         cmd.pointIndex != lastCmd.pointIndex ||
+         cmd.resizeType != lastCmd.resizeType ||
+         cmd.x != lastCmd.x ||
+         cmd.y != lastCmd.y ) {
+      console.log( 'Pushing to stack: ' + JSON.stringify( cmd ) );
+
+      // Copy command before adding to stack, to make sure it can't get messed with after the fact
+      const thisCmd = Object.assign( {}, cmd );
+      editorState.undoStack.push( thisCmd );
+    }
+    else if ( cmd.type == 'MovePoint' || cmd.type == 'MoveLoop' || cmd.type == 'ResizeLoop' ) {
+      lastCmd.dx += cmd.dx;
+      lastCmd.dy += cmd.dy;
+    }
+    else if ( cmd.type == 'RotateLoop') {
+      lastCmd.angle += cmd.angle;
+    }
+    else {
+      debugger;
+    }
+  }
+
+  function undo() {
+    const cmd = editorState.undoStack.pop();
+
+    if ( cmd ) {
+      console.log( 'Undoing: ' + JSON.stringify( cmd ) );
+      Level.undoCommand( editorState.level, cmd );
+
+      editorState.selectedIndex = null;   // causes problems if we delete selected loop
+    }
+    
+    canvas.redraw();
+  }
+
+  function load( json ) {
+    if ( json != null ) {
+      editorState = newEditorState( json );
+    }
+
+    canvas.redraw();
+  }
+
+  function makeLoop( left, top, right, bottom ) {
+    const loop = [];
+
+    const width = ( right - left ) / 2;
+    const height = ( bottom - top ) / 2;
+    const x = left + width;
+    const y = top + height;
+
+    const numPoints = 10 + width * height;
+    for ( let i = 0; i < numPoints; i ++ ) {
+      const angle = Math.PI * 2 * ( i + 0.5 * Math.random() ) / numPoints;
+      const dist = 0.8 + 0.2 * Math.random();
+      loop.push( [ 
+        x + width  * dist * Math.cos( angle ), 
+        y + height * dist * Math.sin( angle ),
+      ] );
+    }
+
+    return loop;
+  }
+
+  function getHoverUnder( targetX, targetY ) {
+    // Resize selected
+    if ( editorState.selectedIndex != null ) {
+      const boundsInfo = getBoundsInfo( getBounds( editorState.level.loops[ editorState.selectedIndex ] ) );
+
+      let closestPoint, closestIndex, closestDist = Infinity;
+      boundsInfo.points.forEach( ( p, index ) => {
+        const dist = Math.hypot( p[ 0 ] - targetX, p[ 1 ] - targetY );
+
+        if ( dist < closestDist ) {
+          closestPoint = p;
+          closestIndex = index;
+          closestDist = dist;
+        }
+      } );
+
+      if ( closestDist < POINT_RADIUS * 4 ) {
+        return  {
+          type: HoverType.Resize,
+          resizeType: closestIndex * 2,  // resizeTypes alternate between point and edge
+          loopIndex: editorState.selectedIndex,
+        };
+      }
+    }
+
+    // Existing point
+    {
+      let closestLoopIndex, closestPointIndex, closestDist = Infinity;
+      editorState.level.loops.forEach( ( loop, loopIndex ) => {
+        loop.forEach( ( p, pointIndex ) => {
+          const dist = Math.hypot( p[ 0 ] - targetX, p[ 1 ] - targetY );
+
+          if ( dist < closestDist ) {
+            closestLoopIndex = loopIndex;
+            closestPointIndex = pointIndex;
+            closestDist = dist;
+          }
+        } );
+      } );
+
+      if ( closestDist < POINT_RADIUS * 4 ) {
+        return {
+          type: HoverType.Point,
+          loopIndex: closestLoopIndex,
+          pointIndex: closestPointIndex,
+        };
+      }
+    }
+
+    // Edge (to add point)
+    {
+      let closestPoint, closestLoopIndex, closestPointIndex, closestDist = Infinity;
+      editorState.level.loops.forEach( ( loop, loopIndex ) => {
+        for ( let i = 0; i < loop.length; i ++ ) {
+          const current = loop[ i ];
+          const next = loop[ ( i + 1 ) % loop.length ];
+
+          const x1 = current[ 0 ];
+          const y1 = current[ 1 ];
+          const x2 = next[ 0 ];
+          const y2 = next[ 1 ];
+
+          const px = x2 - x1;
+          const py = y2 - y1;
+          const D = ( px * px ) + ( py * py );
+
+          const len = Math.sqrt( D );
+          const normX = py / len;
+          const normY = -px / len;
+          
+          const u = ( ( targetX - x1 ) * px + ( targetY - y1 ) * py ) / D;
+
+          if ( 0 <= u && u <= 1 ) {
+            const x = x1 + u * px;
+            const y = y1 + u * py;
+
+            const dist = Math.abs( ( targetX - x1 ) * normX + ( targetY - y1 ) * normY );
+
+            if ( dist < closestDist ) {
+              closestLoopIndex = loopIndex;
+              closestPointIndex = i + 1;    // will add after current point
+              closestPoint = [ x, y ];
+              closestDist = dist;
+            }
+          }
+        }
+      } );
+
+      if ( closestDist < POINT_RADIUS * 4 ) {
+        return {
+          type: HoverType.Edge,
+          loopIndex: closestLoopIndex,
+          pointIndex: closestPointIndex,
+          point: closestPoint,
+        };
+      }
+    }
+
+    // Loop (do last, so we don't prevent points or edges from being detected)
+    for ( let i = 0; i < editorState.level.loops.length; i ++ ) {
+      const bounds = getBounds( editorState.level.loops[ i ] );
+
+      if ( bounds.left <= mouse.x && mouse.x <= bounds.right && 
+           bounds.top  <= mouse.y && mouse.y <= bounds.bottom ) {
+        return {
+          type: HoverType.Loop,
+          loopIndex: i,
+        };
+      }
+    }
+  }
+
+  const buttonActions = {
+    'play': ( e ) => {
+      if ( mode == Mode.Edit ) {
+        mode = Mode.Play;
+        document.getElementById( 'play' ).innerText = 'Edit';
+        world = new World( editorState.level.loops );
+        canvas.start();
+      }
+      else if ( mode == Mode.Play ) {
+        canvas.stop();
+
+        mode = Mode.Edit;
+        document.getElementById( 'play' ).innerText = 'Play';
+        world = null;
+        canvas.redraw();
+      }
+    },
+    'save': ( e ) => {
+      alert( JSON.stringify( editorState.level ) );
+    },
+    'load': ( e ) => {
+      load( JSON.parse( prompt() ) );
+    },
+    'undo': ( e ) => {
+      undo();
+    },
+    'clear': ( e ) => {
+      editorState = newEditorState();
+    }
+  }
+
+  for ( const buttonId in buttonActions ) {
+    document.getElementById( buttonId ).addEventListener( 'click', buttonActions[ buttonId ] );
+  }
+
+</script>
