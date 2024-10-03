@@ -77,6 +77,9 @@
   }
 
   canvas.draw = ( ctx ) => {
+
+    ctx.font = '0.25px Arial';
+
     if ( mode == Mode.Edit ) {
       // Loops
       ctx.fillStyle = 'green';
@@ -158,6 +161,8 @@
         }
         else if ( hover.pointIndex != null ) {
           drawPoint( ctx, editorState.level.loops[ hover.loopIndex ][ hover.pointIndex ], POINT_RADIUS * 2 );
+
+          ctx.fillText( `Loop: ${ hover.loopIndex }, Point: ${ hover.pointIndex }`, SIZE * 0.35, -SIZE * 0.45 );
         }
         
         ctx.fill();  
