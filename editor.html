@@ -85,6 +85,22 @@
         loop.forEach( p => ctx.lineTo( p[ 0 ], p[ 1 ] ) );
         ctx.fill();
       } );
+
+      // Spawn
+      const spawn = editorState.level.spawn;
+      if ( spawn ) {
+        ctx.fillStyle = '#fffa';
+        ctx.beginPath();
+        ctx.arc( spawn[ 0 ], spawn[ 1 ], 0.2, 0, Math.PI * 2 );
+        ctx.fill();
+      }
+
+      // Goal
+      const goal = editorState.level.goal;
+      if ( goal ) {
+        ctx.fillStyle = '#00fa';
+        ctx.fillRect( goal[ 0 ], goal[ 1 ], goal[ 2 ] - goal[ 0 ], goal[ 3 ] - goal[ 1 ] );
+      }
       
       // Bounds
       if ( editorState.selectedIndex != null ) {
@@ -595,7 +611,7 @@
       if ( mode == Mode.Edit ) {
         mode = Mode.Play;
         document.getElementById( 'play' ).innerText = 'Edit';
-        world = new World( editorState.level.loops );
+        world = new World( editorState.level );
         canvas.start();
       }
       else if ( mode == Mode.Play ) {
