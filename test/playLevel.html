@@ -16,12 +16,39 @@
   canvas.scrollX = SIZE / 2;
   canvas.scrollY = SIZE / 2;
   
+  let dragStart;
+
+  const pullGrad = canvas.ctx.createRadialGradient( 0, 0, 0, 0, 0, 1 );
+  pullGrad.addColorStop( 0, 'green' );
+  pullGrad.addColorStop( 0.5, 'yellow' );
+  pullGrad.addColorStop( 1, 'red' );
+
   canvas.update = ( dt ) => {
     world.update( dt );
   }
 
   canvas.draw = ( ctx ) => {
     world.draw( ctx );
+
+    if ( dragStart ) {
+      const cx = dragStart.x - mouse.x;
+      const cy = dragStart.y - mouse.y;
+      const angle = Math.atan2( cy, cx );
+      const dist = Math.hypot( cx, cy );
+
+      const offX =  Math.sin( angle ) * world.player.radius;
+      const offY = -Math.cos( angle ) * world.player.radius;
+
+      ctx.translate( world.player.x, world.player.y );
+      ctx.beginPath();
+      ctx.lineTo( offX, offY );
+      ctx.lineTo( -offX, -offY );
+      ctx.lineTo( -Math.cos( angle ) * dist, -Math.sin( angle ) * dist );
+
+      ctx.fillStyle = pullGrad;
+      ctx.fill();
+      ctx.translate( -world.player.x, -world.player.y );
+    }
   }
 
   canvas.start();
@@ -36,8 +63,7 @@
     mouse.y = canvas.getPointerY( e );
   }
 
-  let dragStart;
-
+  
   canvas.canvas.addEventListener( 'pointerdown', e => {
     updateMousePos( e );
 
