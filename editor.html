@@ -426,6 +426,18 @@
     canvas.redraw();
   } );
 
+  document.addEventListener( 'keydown', e => {
+    if ( e.key == 's' ) {
+      applyCommand( {
+        type: 'MoveSpawn',
+        dx: mouse.x - editorState.level.spawn[ 0 ],
+        dy: mouse.y - editorState.level.spawn[ 1 ],
+      } );
+    }
+
+    canvas.redraw();
+  } );
+
   function applyCommand( cmd ) {
     console.log( 'Applying: ' + JSON.stringify( cmd ) );
     Level.applyCommand( editorState.level, cmd );

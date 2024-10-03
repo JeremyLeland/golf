@@ -1,6 +1,6 @@
 export const ResizeType = {
   NW: 0, N: 1, NE: 2,
-    W: 7,       E:  3,
+   W: 7,       E:  3,
   SW: 6, S: 5, SE: 4,
 };
 
@@ -56,11 +56,19 @@ export const Edit = {
     apply: ( level, cmd ) => deleteLoop( level, cmd.loopIndex             ),
     undo:  ( level, cmd ) => addLoop   ( level, cmd.loopIndex, cmd.points ),
   },
+
+  MoveSpawn: {
+    name: 'MoveSpawn',
+    apply: ( level, cmd ) => moveSpawn( level,  cmd.dx,  cmd.dy ),
+    undo:  ( level, cmd ) => moveSpawn( level, -cmd.dx, -cmd.dy ),
+  }
 };
 
 export function newLevel() {
   return {
     loops: [],
+    spawn: [ 0, 0 ],
+    // goal - default?
   };
 }
 
@@ -145,6 +153,11 @@ function rotateLoop( level, loopIndex, x, y, angle ) {
 
 function deleteLoop( level, loopIndex ) {
   level.loops.splice( loopIndex, 1 );
+}
+
+function moveSpawn( level, dx, dy ) {
+  level.spawn[ 0 ] += dx;
+  level.spawn[ 1 ] += dy;
 }
 
 function getBounds( loop ) {

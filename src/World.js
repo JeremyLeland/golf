@@ -81,13 +81,30 @@ export class World {
         const normalAngle = currentLine.normalAngle;
         const slopeAngle = currentLine.slopeAngle;
 
-        this.player.x -= Math.cos( normalAngle ) * currentDist;
-        this.player.y -= Math.sin( normalAngle ) * currentDist;
+        // TODO: Don't always snap. Definitely back us out of collision, but don't bring us back to it if we are trying to escape.
+        // Maybe only if velocity vector projected on normal is negative?
+
+        const normX = Math.cos( normalAngle );
+        const normY = Math.sin( normalAngle );
+
+        const proj = this.player.dx * normX + this.player.dy * normY;
+
+        console.log( 'proj = ' + proj );
+
+        if ( proj <= 0 ) { 
+          this.player.x -= Math.cos( normalAngle ) * currentDist;
+          this.player.y -= Math.sin( normalAngle ) * currentDist;
+        }
+        else {
+          currentLine = null;
+        }
       }
+
+      let stopped = false;
 
       for ( let step = 0; step < 5; step ++ ) {
 
-        let nextTime = dt, nextLine = null, stopped = false;
+        let nextTime = dt, nextLine = null;
 
         if ( currentLine ) {
           const normalAngle = currentLine.normalAngle;
@@ -101,7 +118,7 @@ export class World {
           const playerAngle = Math.atan2( this.player.dy, this.player.dx );
           
           if ( Math.abs( deltaAngle( slopeAngle, playerAngle ) ) < ROLL_ANGLE ||
-              Math.abs( deltaAngle( playerAngle, slopeAngle + Math.PI ) ) < ROLL_ANGLE ) {
+               Math.abs( deltaAngle( playerAngle, slopeAngle + Math.PI ) ) < ROLL_ANGLE ) {
             const proj = this.player.dx * lineSlopeX + this.player.dy * lineSlopeY;
 
             const playerSlopeX = proj < 0 ? -lineSlopeX : lineSlopeX;
@@ -186,6 +203,13 @@ export class World {
         }
 
         currentLine = nextLine;
+      }
+
+      // TODO: Stopped doesn't seem to be working
+      // Want to detect actually stopped, as in acceleration can't overcome friction
+      // Maybe we need to implement stationary vs kinetic friction (or whatever they're called) to simulate properly?
+      if ( stopped ) {
+        console.log( 'Stopped' );
       }
     }
   }
