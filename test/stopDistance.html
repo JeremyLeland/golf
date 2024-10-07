@@ -1,6 +1,18 @@
 <title>Validating stopping distance</title>
 <link rel="stylesheet" href="../style.css">
 
+<style>
+  #ui {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+</style>
+
+<div id="ui">
+  <input id="RollFriction" type="range" min="0" max="10" value="5" step="0.1" class="slider"/>
+</div>
+
 <script type="module">
   import { Canvas } from '../src/Canvas.js';
   import { World } from '../src/World.js';
@@ -11,7 +23,7 @@
 
   const NUM_LINES = 8, LINE_LEN = 2;
   for ( let i = 0; i < NUM_LINES; i++ ) {
-    const angle = ( i / NUM_LINES ) * ( Math.PI / 3 );
+    const angle = ( i / NUM_LINES ) * ( Math.PI / 2 );
     const x = 2.2 * Math.floor( 2 * i / NUM_LINES );
     const y = i % ( NUM_LINES / 2 );
     lines.push(
@@ -19,12 +31,26 @@
     );
   }
 
+  const Constants = {
+    RollFriction: 5.0,
+  };
+
+  for ( const val in Constants ) {
+    const ui = document.getElementById( val );
+    ui.value = Constants[ val ];
+    ui.addEventListener( 'input', e => {
+      Constants[ val ] = +e.target.value;
+      canvas.redraw();
+    } );
+  }
+
+ 
+
   const PLAYER_RADIUS = 0.1;
   const GRAVITY = 0.00001;
-  const ROLL_FRICTION = 5.0;
 
 
-  const SIZE = 5;
+  const SIZE = 7;
   const canvas = new Canvas();
   canvas.zoom = 1 / SIZE;
   canvas.scrollX = SIZE / 8;
@@ -49,6 +75,8 @@
 
       const slopeAngle = line.slopeAngle;
 
+      console.log( 'slopeAngle: ' + slopeAngle );
+
       const lineSlopeX = Math.cos( slopeAngle );
       const lineSlopeY = Math.sin( slopeAngle );
 
@@ -57,7 +85,7 @@
 
       const playerSpeed = START_SPEED;
 
-      const a = GRAVITY * ( playerSlopeY - ROLL_FRICTION * playerSlopeX );    // TODO: base friction on line slope or player slope?
+      const a = GRAVITY * ( playerSlopeY - Constants.RollFriction * playerSlopeX );    // TODO: base friction on line slope or player slope?
 
       const player = {
         x: startX,
@@ -68,30 +96,47 @@
         ay: a * playerSlopeY,
       };
 
+      //
+      // NOTES
+      //
+
+      // 1. The calculated steps overshoot the brakeTime value
+      // 2. They overshoot by more when RollFriction is closer to 0, by less as it increases
+
       const stopPlayer = Object.assign( {}, player );
 
       const COLORS = [ 'red', 'orange', 'yellow', 'green', 'dodgerblue' ];
 
-      for ( let i = 0; i < 30; i ++ ) {
+      for ( let i = 0; i < 200; i ++ ) {
         ctx.fillStyle = COLORS[ i % COLORS.length ];
         drawPlayer( ctx, player );
 
         const nextTime = 10;
 
-        player.x += player.dx * nextTime + 0.5 * player.ax * nextTime * nextTime;
-        player.y += player.dy * nextTime + 0.5 * player.ay * nextTime * nextTime;
+        player.x += player.dx * nextTime + 0.5 * player.ax * nextTime ** 2;
+        player.y += player.dy * nextTime + 0.5 * player.ay * nextTime ** 2;
         
         player.dx += player.ax * nextTime;
         player.dy += player.ay * nextTime;
+
+        // Stop it from reversing for now
+        if ( player.dx < 0 ) {
+          break;
+        }
       }
 
-      const brakeTime = playerSpeed / ( GRAVITY * ( playerSlopeY + ROLL_FRICTION * playerSlopeX ) );
-
-      stopPlayer.x += stopPlayer.dx * brakeTime + 0.5 * stopPlayer.ax * brakeTime * brakeTime;
-      stopPlayer.y += stopPlayer.dy * brakeTime + 0.5 * stopPlayer.ay * brakeTime * brakeTime;
+      const brakeTime = playerSpeed / -a;
+     
+      stopPlayer.x += stopPlayer.dx * brakeTime + 0.5 * stopPlayer.ax * brakeTime ** 2;
+      stopPlayer.y += stopPlayer.dy * brakeTime + 0.5 * stopPlayer.ay * brakeTime ** 2;
       
       stopPlayer.dx += stopPlayer.ax * brakeTime;
       stopPlayer.dy += stopPlayer.ay * brakeTime;
+
+      console.log( 'playerSlopeX: ' + playerSlopeX );
+      console.log( 'playerSlopeY: ' + playerSlopeY );
+      console.log( 'brakeTime: ' + brakeTime );
+      console.log( playerSpeed + a * brakeTime );
 
       ctx.strokeStyle = 'white';
       drawPlayer( ctx, stopPlayer, false );
@@ -106,7 +151,7 @@
     } );
   }
 
-  canvas.redraw();
+  // canvas.redraw();
 
   function drawPlayer( ctx, player, fill = true ) {
     ctx.beginPath();
