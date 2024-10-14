@@ -10,7 +10,10 @@
 </style>
 
 <div id="ui">
-  <input id="RollFriction" type="range" min="0" max="10" value="5" step="0.1" class="slider"/>
+  Friction:
+  <input id="RollFriction" type="range" min="0" max="10" step="0.1" class="slider"/>
+  Steps:
+  <input id="Steps" type="range" min="0" max="50" step="1" class="slider"/>
 </div>
 
 <script type="module">
@@ -23,9 +26,9 @@
 
   const NUM_LINES = 8, LINE_LEN = 2;
   for ( let i = 0; i < NUM_LINES; i++ ) {
-    const angle = ( i / NUM_LINES ) * ( Math.PI / 2 );
-    const x = 2.2 * Math.floor( 2 * i / NUM_LINES );
-    const y = i % ( NUM_LINES / 2 );
+    const angle = ( i / NUM_LINES - 0.5) * ( Math.PI / 2 );
+    const x = 2.5 * Math.floor( 2 * i / NUM_LINES );
+    const y = 1 + i % ( NUM_LINES / 2 );
     lines.push(
       new Line( x, y, x + LINE_LEN * Math.cos( angle ), y + LINE_LEN * Math.sin( angle ) ),
     );
@@ -33,6 +36,7 @@
 
   const Constants = {
     RollFriction: 5.0,
+    Steps: 0,
   };
 
   for ( const val in Constants ) {
@@ -70,8 +74,10 @@
       line.draw( ctx );
 
       const normAngle = line.normalAngle;
-      const startX = line.x1 + Math.cos( normAngle ) * PLAYER_RADIUS;
-      const startY = line.y1 + Math.sin( normAngle ) * PLAYER_RADIUS;
+      const normX = Math.cos( normAngle );
+      const normY = Math.sin( normAngle );
+      const startX = line.x1 + normX * PLAYER_RADIUS;
+      const startY = line.y1 + normY * PLAYER_RADIUS;
 
       const slopeAngle = line.slopeAngle;
 
@@ -80,12 +86,27 @@
       const lineSlopeX = Math.cos( slopeAngle );
       const lineSlopeY = Math.sin( slopeAngle );
 
+      const dir = normX < 0 ? -1 : 1;
+
       const playerSlopeX = lineSlopeX;  // TODO: Account for direction of travel
       const playerSlopeY = lineSlopeY;  // TODO: Account for direction of travel
 
       const playerSpeed = START_SPEED;
 
-      const a = GRAVITY * ( playerSlopeY - Constants.RollFriction * playerSlopeX );    // TODO: base friction on line slope or player slope?
+      const gravTerm = GRAVITY * Math.sin( slopeAngle );
+
+      // TODO: Friction term should take into account direction of travel
+
+      const fricTerm = -GRAVITY * Constants.RollFriction * Math.cos( slopeAngle );
+
+      console.log( 'gravTerm: ' + gravTerm );
+      console.log( 'fricTerm: ' + fricTerm );
+
+      const a = gravTerm + fricTerm;
+
+      // const a = normX < 0 ? 
+      //   -GRAVITY * Math.sin( -slopeAngle ) - GRAVITY * Constants.RollFriction * Math.cos( slopeAngle ) :
+      //   GRAVITY * Math.sin( slopeAngle ) - GRAVITY * Constants.RollFriction * Math.cos( slopeAngle )
 
       const player = {
         x: startX,
@@ -96,21 +117,21 @@
         ay: a * playerSlopeY,
       };
 
+      const stopPlayer = Object.assign( {}, player );
+
       //
       // NOTES
       //
 
-      // 1. The calculated steps overshoot the brakeTime value
-      // 2. They overshoot by more when RollFriction is closer to 0, by less as it increases
+      // TODO: Add slider for time (so we can advance and back up and watch forces change)
 
-      const stopPlayer = Object.assign( {}, player );
+
+      ctx.fillStyle = 'tan';
+      drawPlayer( ctx, player );
 
       const COLORS = [ 'red', 'orange', 'yellow', 'green', 'dodgerblue' ];
 
-      for ( let i = 0; i < 200; i ++ ) {
-        ctx.fillStyle = COLORS[ i % COLORS.length ];
-        drawPlayer( ctx, player );
-
+      for ( let i = 0; i < Constants.Steps; i ++ ) {
         const nextTime = 10;
 
         player.x += player.dx * nextTime + 0.5 * player.ax * nextTime ** 2;
@@ -119,11 +140,55 @@
         player.dx += player.ax * nextTime;
         player.dy += player.ay * nextTime;
 
+        ctx.fillStyle = COLORS[ i % COLORS.length ];
+        drawPlayer( ctx, player );
+
         // Stop it from reversing for now
-        if ( player.dx < 0 ) {
-          break;
-        }
+        // if ( player.dx < 0 ) {
+        //   break;
+        // }
       }
+
+      const A_LEN = 10000, V_LEN = 100, TEXT_OFFSET = -0.1;
+
+      ctx.font = '0.08px Arial';
+      ctx.fillStyle = 'white';
+
+      ctx.beginPath();
+      ctx.lineTo( player.x, player.y );
+      ctx.lineTo( player.x + playerSlopeX * gravTerm * A_LEN, player.y + playerSlopeY * gravTerm * A_LEN );
+      ctx.strokeStyle = 'blue';
+      ctx.save(); {
+        ctx.lineWidth = 0.05;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.fillText( gravTerm, player.x + playerSlopeX * gravTerm * A_LEN, player.y + playerSlopeY * gravTerm * A_LEN - TEXT_OFFSET );
+
+      ctx.beginPath();
+      ctx.lineTo( player.x, player.y );
+      ctx.lineTo( player.x + playerSlopeX * fricTerm * A_LEN, player.y + playerSlopeY * fricTerm * A_LEN );
+      ctx.strokeStyle = '#ff58';
+      ctx.save(); {
+        ctx.lineWidth = 0.025;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.fillText( fricTerm, player.x + playerSlopeX * fricTerm * A_LEN, player.y + playerSlopeY * fricTerm * A_LEN - TEXT_OFFSET );
+
+      ctx.beginPath();
+      ctx.lineTo( player.x, player.y );
+      ctx.lineTo( player.x + player.dx * V_LEN, player.y + player.dy * V_LEN );
+      ctx.strokeStyle = 'white';
+      ctx.save(); {
+        ctx.lineWidth = 0.0125;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.fillText( `${ player.dx }, ${ player.dy }`, player.x + player.dx * V_LEN, player.y + player.dy * V_LEN - TEXT_OFFSET );
 
       const brakeTime = playerSpeed / -a;
      
@@ -133,20 +198,15 @@
       stopPlayer.dx += stopPlayer.ax * brakeTime;
       stopPlayer.dy += stopPlayer.ay * brakeTime;
 
-      console.log( 'playerSlopeX: ' + playerSlopeX );
-      console.log( 'playerSlopeY: ' + playerSlopeY );
-      console.log( 'brakeTime: ' + brakeTime );
-      console.log( playerSpeed + a * brakeTime );
-
       ctx.strokeStyle = 'white';
       drawPlayer( ctx, stopPlayer, false );
       
-      ctx.fillStyle = 'white';
-      const fontSize = 0.08;
-      ctx.font = `${ fontSize }px Arial`;
-      JSON.stringify( stopPlayer ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
-        ctx.fillText( str, stopPlayer.x + 2 * fontSize, stopPlayer.y + fontSize * index );
-      } );
+      // ctx.fillStyle = 'white';
+      // const fontSize = 0.08;
+      // ctx.font = `${ fontSize }px Arial`;
+      // JSON.stringify( stopPlayer ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
+      //   ctx.fillText( str, stopPlayer.x + 2 * fontSize, stopPlayer.y + fontSize * index );
+      // } );
 
     } );
   }
