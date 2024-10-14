@@ -1,0 +1,229 @@
+<title>Go to stop distance, then turn around</title>
+<link rel="stylesheet" href="../style.css">
+
+<style>
+  #ui {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+</style>
+
+<div id="ui">
+  Friction:
+  <input id="RollFriction" type="range" min="0" max="10" step="0.1" class="slider"/>
+  Steps:
+  <input id="Steps" type="range" min="0" max="50" step="1" class="slider"/>
+</div>
+
+<script type="module">
+  import { Canvas } from '../src/Canvas.js';
+  import { World } from '../src/World.js';
+  import * as Level from '../src/Level.js';
+  import { Line } from '../src/Line.js';
+
+  const lines = [];
+
+  const NUM_LINES = 8, LINE_LEN = 2;
+  for ( let i = 0; i < NUM_LINES; i++ ) {
+    const angle = ( i / NUM_LINES - 0.5) * ( Math.PI / 2 );
+    const x = 2.5 * Math.floor( 2 * i / NUM_LINES );
+    const y = 1 + i % ( NUM_LINES / 2 );
+    lines.push(
+      new Line( x, y, x + LINE_LEN * Math.cos( angle ), y + LINE_LEN * Math.sin( angle ) ),
+    );
+  }
+
+  const Constants = {
+    RollFriction: 5.0,
+    Steps: 0,
+  };
+
+  for ( const val in Constants ) {
+    const ui = document.getElementById( val );
+    ui.value = Constants[ val ];
+    ui.addEventListener( 'input', e => {
+      Constants[ val ] = +e.target.value;
+      canvas.redraw();
+    } );
+  }
+
+  const PLAYER_RADIUS = 0.1;
+  const GRAVITY = 0.00001;
+
+  const SIZE = 7;
+  const canvas = new Canvas();
+  canvas.zoom = 1 / SIZE;
+  canvas.scrollX = SIZE / 8;
+  canvas.scrollY = SIZE / 8;
+
+  canvas.draw = ( ctx ) => {
+    const START_SPEED = 0.01;
+
+    ctx.lineWidth = 0.1 * canvas.zoom;
+    lines.forEach( line => {
+      ctx.strokeStyle = 'green';
+      line.draw( ctx );
+
+      const normAngle = line.normalAngle;
+      const normX = Math.cos( normAngle );
+      const normY = Math.sin( normAngle );
+      const startX = line.x1 + normX * PLAYER_RADIUS;
+      const startY = line.y1 + normY * PLAYER_RADIUS;
+
+      const slopeAngle = line.slopeAngle;
+
+      console.log( 'slopeAngle: ' + slopeAngle );
+
+      const lineSlopeX = Math.cos( slopeAngle );
+      const lineSlopeY = Math.sin( slopeAngle );
+
+      const player = {
+        x: startX,
+        y: startY,
+        dx: START_SPEED * lineSlopeX,
+        dy: START_SPEED * lineSlopeY,
+        ax: 0,
+        ay: 0,
+      };
+
+
+      ctx.fillStyle = 'tan';
+      drawPlayer( ctx, player );
+
+      const COLORS = [ 'red', 'orange', 'yellow', 'green', 'dodgerblue' ];
+
+      for ( let i = 0; i < Constants.Steps; i ++ ) {
+        const nextTime = 10;
+
+        const gravTerm = GRAVITY * lineSlopeY;
+
+        const proj = player.dx * lineSlopeX + player.dy * lineSlopeY;
+        const playerSlopeX = proj < 0 ? -lineSlopeX : lineSlopeX;
+        const playerSlopeY = proj < 0 ? -lineSlopeY : lineSlopeY;
+
+        const fricTerm = -GRAVITY * Constants.RollFriction * playerSlopeX;
+
+        const a = gravTerm + fricTerm;
+
+        player.ax = a * lineSlopeX;
+        player.ay = a * lineSlopeY;
+        
+        player.x += player.dx * nextTime + 0.5 * player.ax * nextTime ** 2;
+        player.y += player.dy * nextTime + 0.5 * player.ay * nextTime ** 2;
+
+        player.dx += player.ax * nextTime;
+        player.dy += player.ay * nextTime;
+        
+
+        ctx.fillStyle = COLORS[ i % COLORS.length ];
+        drawPlayer( ctx, player );
+
+        // Stop it from reversing for now
+        // if ( player.dx < 0 ) {
+        //   break;
+        // }
+
+        if ( i == Constants.Steps - 1 ) {
+          const playerSpeed = Math.hypot( player.dx, player.dy );
+          const brakeTime = playerSpeed / -a;
+
+          const stopPlayer = Object.assign( {}, player );
+
+          stopPlayer.x += stopPlayer.dx * brakeTime + 0.5 * stopPlayer.ax * brakeTime ** 2;
+          stopPlayer.y += stopPlayer.dy * brakeTime + 0.5 * stopPlayer.ay * brakeTime ** 2;
+          
+          stopPlayer.dx += stopPlayer.ax * brakeTime;
+          stopPlayer.dy += stopPlayer.ay * brakeTime;
+
+          ctx.strokeStyle = 'white';
+          drawPlayer( ctx, stopPlayer, false );
+
+          const A_LEN = 10000, V_LEN = 100, TEXT_OFFSET = 0.2;
+
+          ctx.font = '0.09px Arial';
+          ctx.fillStyle = 'white';
+
+          ctx.beginPath();
+          ctx.lineTo( player.x, player.y );
+          ctx.lineTo( player.x + lineSlopeX * gravTerm * A_LEN, player.y + lineSlopeY * gravTerm * A_LEN );
+          ctx.strokeStyle = 'blue';
+          ctx.save(); {
+            ctx.lineWidth = 0.04;
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          ctx.fillText( gravTerm, player.x + lineSlopeX * gravTerm * A_LEN, player.y + lineSlopeY * gravTerm * A_LEN + TEXT_OFFSET );
+
+          ctx.beginPath();
+          ctx.lineTo( player.x, player.y );
+          ctx.lineTo( player.x + lineSlopeX * fricTerm * A_LEN, player.y + lineSlopeY * fricTerm * A_LEN );
+          ctx.strokeStyle = '#ff58';
+          ctx.save(); {
+            ctx.lineWidth = 0.03;
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          ctx.fillText( fricTerm, player.x + lineSlopeX * fricTerm * A_LEN, player.y + lineSlopeY * fricTerm * A_LEN + TEXT_OFFSET );
+
+          ctx.beginPath();
+          ctx.lineTo( player.x, player.y );
+          ctx.lineTo( player.x + player.ax * A_LEN, player.y + player.ay * A_LEN );
+          ctx.strokeStyle = 'gray';
+          ctx.save(); {
+            ctx.lineWidth = 0.02;
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          ctx.fillText( a, player.x + player.ax * A_LEN, player.y + player.ay * A_LEN + TEXT_OFFSET );
+
+          ctx.beginPath();
+          ctx.lineTo( player.x, player.y );
+          ctx.lineTo( player.x + player.dx * V_LEN, player.y + player.dy * V_LEN );
+          ctx.strokeStyle = 'white';
+          ctx.save(); {
+            ctx.lineWidth = 0.0125;
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // ctx.fillText( `${ player.dx }, ${ player.dy }`, player.x + player.dx * V_LEN, player.y + player.dy * V_LEN + TEXT_OFFSET );
+
+          
+        }
+      }
+
+      
+
+      
+      
+      
+      // ctx.fillStyle = 'white';
+      // const fontSize = 0.08;
+      // ctx.font = `${ fontSize }px Arial`;
+      // JSON.stringify( stopPlayer ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
+      //   ctx.fillText( str, stopPlayer.x + 2 * fontSize, stopPlayer.y + fontSize * index );
+      // } );
+
+    } );
+  }
+
+  // canvas.redraw();
+
+  function drawPlayer( ctx, player, fill = true ) {
+    ctx.beginPath();
+    ctx.arc( player.x, player.y, PLAYER_RADIUS, 0, Math.PI * 2 );
+    ctx.closePath();
+
+    if ( fill ) {
+      ctx.fill();
+    }
+    else {
+      ctx.stroke();
+    }
+  }
+
+</script>
