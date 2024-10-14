@@ -465,7 +465,11 @@
       lastCmd.angle += cmd.angle;
     }
     else {
-      debugger;
+      console.log( 'Still pushing to stack: ' + JSON.stringify( cmd ) );
+
+      // Copy command before adding to stack, to make sure it can't get messed with after the fact
+      const thisCmd = Object.assign( {}, cmd );
+      editorState.undoStack.push( thisCmd );
     }
   }
 
