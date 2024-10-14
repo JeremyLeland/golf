@@ -10,10 +10,12 @@
 </style>
 
 <div id="ui">
+  Gravity:
+  <input id="Gravity" type="number" min="0" max="0.0001" step="0.000001"/>
   Friction:
-  <input id="RollFriction" type="range" min="0" max="10" step="0.1" class="slider"/>
+  <input id="RollFriction" type="number" min="0" max="10" step="0.1"/>
   Steps:
-  <input id="Steps" type="range" min="0" max="50" step="1" class="slider"/>
+  <input id="Steps" type="range" min="0" max="100" step="1"/>
 </div>
 
 <script type="module">
@@ -26,7 +28,7 @@
 
   const NUM_LINES = 8, LINE_LEN = 2;
   for ( let i = 0; i < NUM_LINES; i++ ) {
-    const angle = ( i / NUM_LINES - 0.5) * ( Math.PI / 2 );
+    const angle = ( i / NUM_LINES - 0.5) * ( Math.PI / 1 );
     const x = 2.5 * Math.floor( 2 * i / NUM_LINES );
     const y = 1 + i % ( NUM_LINES / 2 );
     lines.push(
@@ -35,8 +37,9 @@
   }
 
   const Constants = {
-    RollFriction: 5.0,
-    Steps: 0,
+    Gravity: 0.00003,   // was 0.00001
+    RollFriction: 1,    // was 5
+    Steps: 1,
   };
 
   for ( const val in Constants ) {
@@ -49,7 +52,6 @@
   }
 
   const PLAYER_RADIUS = 0.1;
-  const GRAVITY = 0.00001;
 
   const SIZE = 7;
   const canvas = new Canvas();
@@ -59,6 +61,8 @@
 
   canvas.draw = ( ctx ) => {
     const START_SPEED = 0.01;
+
+    console.log();
 
     ctx.lineWidth = 0.1 * canvas.zoom;
     lines.forEach( line => {
@@ -72,8 +76,6 @@
       const startY = line.y1 + normY * PLAYER_RADIUS;
 
       const slopeAngle = line.slopeAngle;
-
-      console.log( 'slopeAngle: ' + slopeAngle );
 
       const lineSlopeX = Math.cos( slopeAngle );
       const lineSlopeY = Math.sin( slopeAngle );
@@ -91,109 +93,125 @@
       ctx.fillStyle = 'tan';
       drawPlayer( ctx, player );
 
-      const COLORS = [ 'red', 'orange', 'yellow', 'green', 'dodgerblue' ];
+      const COLORS = [ '#555', '#666' ];
 
       for ( let i = 0; i < Constants.Steps; i ++ ) {
         const nextTime = 10;
 
-        const gravTerm = GRAVITY * lineSlopeY;
+        const dir = player.dx < 0 ? -1 : 1 ;
+        const gravTerm = lineSlopeY;
+        const fricTerm = dir * Constants.RollFriction * lineSlopeX;
 
-        const proj = player.dx * lineSlopeX + player.dy * lineSlopeY;
-        const playerSlopeX = proj < 0 ? -lineSlopeX : lineSlopeX;
-        const playerSlopeY = proj < 0 ? -lineSlopeY : lineSlopeY;
-
-        const fricTerm = -GRAVITY * Constants.RollFriction * playerSlopeX;
-
-        const a = gravTerm + fricTerm;
-
+        const a = Constants.Gravity * ( gravTerm - fricTerm );
         player.ax = a * lineSlopeX;
         player.ay = a * lineSlopeY;
-        
-        player.x += player.dx * nextTime + 0.5 * player.ax * nextTime ** 2;
-        player.y += player.dy * nextTime + 0.5 * player.ay * nextTime ** 2;
 
-        player.dx += player.ax * nextTime;
-        player.dy += player.ay * nextTime;
-        
+        const playerSpeed = dir * Math.hypot( player.dx, player.dy );
+        const brakeTime = playerSpeed / -a;
+        const willStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
 
-        ctx.fillStyle = COLORS[ i % COLORS.length ];
-        drawPlayer( ctx, player );
+        if ( 0 < brakeTime && brakeTime < nextTime ) {
+          player.x += player.dx * brakeTime + 0.5 * player.ax * brakeTime ** 2;
+          player.y += player.dy * brakeTime + 0.5 * player.ay * brakeTime ** 2;
 
-        // Stop it from reversing for now
-        // if ( player.dx < 0 ) {
-        //   break;
-        // }
+          player.dx = 0;
+          player.dy = 0;
 
-        if ( i == Constants.Steps - 1 ) {
-          const playerSpeed = Math.hypot( player.dx, player.dy );
-          const brakeTime = playerSpeed / -a;
+          if ( willStop ) {
+            ctx.fillStyle = 'red';
+            drawPlayer( ctx, player );
 
-          const stopPlayer = Object.assign( {}, player );
-
-          stopPlayer.x += stopPlayer.dx * brakeTime + 0.5 * stopPlayer.ax * brakeTime ** 2;
-          stopPlayer.y += stopPlayer.dy * brakeTime + 0.5 * stopPlayer.ay * brakeTime ** 2;
-          
-          stopPlayer.dx += stopPlayer.ax * brakeTime;
-          stopPlayer.dy += stopPlayer.ay * brakeTime;
-
-          ctx.strokeStyle = 'white';
-          drawPlayer( ctx, stopPlayer, false );
-
-          const A_LEN = 10000, V_LEN = 100, TEXT_OFFSET = 0.2;
-
-          ctx.font = '0.09px Arial';
-          ctx.fillStyle = 'white';
-
-          ctx.beginPath();
-          ctx.lineTo( player.x, player.y );
-          ctx.lineTo( player.x + lineSlopeX * gravTerm * A_LEN, player.y + lineSlopeY * gravTerm * A_LEN );
-          ctx.strokeStyle = 'blue';
-          ctx.save(); {
-            ctx.lineWidth = 0.04;
-            ctx.stroke();
+            break;
           }
-          ctx.restore();
+          else {
+            ctx.fillStyle = 'yellow';
+            drawPlayer( ctx, player );
 
-          ctx.fillText( gravTerm, player.x + lineSlopeX * gravTerm * A_LEN, player.y + lineSlopeY * gravTerm * A_LEN + TEXT_OFFSET );
 
-          ctx.beginPath();
-          ctx.lineTo( player.x, player.y );
-          ctx.lineTo( player.x + lineSlopeX * fricTerm * A_LEN, player.y + lineSlopeY * fricTerm * A_LEN );
-          ctx.strokeStyle = '#ff58';
-          ctx.save(); {
-            ctx.lineWidth = 0.03;
-            ctx.stroke();
           }
-          ctx.restore();
-
-          ctx.fillText( fricTerm, player.x + lineSlopeX * fricTerm * A_LEN, player.y + lineSlopeY * fricTerm * A_LEN + TEXT_OFFSET );
-
-          ctx.beginPath();
-          ctx.lineTo( player.x, player.y );
-          ctx.lineTo( player.x + player.ax * A_LEN, player.y + player.ay * A_LEN );
-          ctx.strokeStyle = 'gray';
-          ctx.save(); {
-            ctx.lineWidth = 0.02;
-            ctx.stroke();
-          }
-          ctx.restore();
-
-          ctx.fillText( a, player.x + player.ax * A_LEN, player.y + player.ay * A_LEN + TEXT_OFFSET );
-
-          ctx.beginPath();
-          ctx.lineTo( player.x, player.y );
-          ctx.lineTo( player.x + player.dx * V_LEN, player.y + player.dy * V_LEN );
-          ctx.strokeStyle = 'white';
-          ctx.save(); {
-            ctx.lineWidth = 0.0125;
-            ctx.stroke();
-          }
-          ctx.restore();
-
-          // ctx.fillText( `${ player.dx }, ${ player.dy }`, player.x + player.dx * V_LEN, player.y + player.dy * V_LEN + TEXT_OFFSET );
-
-          
         }
+        else {
+          player.ax = a * lineSlopeX;
+          player.ay = a * lineSlopeY;
+          
+          player.x += player.dx * nextTime + 0.5 * player.ax * nextTime ** 2;
+          player.y += player.dy * nextTime + 0.5 * player.ay * nextTime ** 2;
+
+          player.dx += player.ax * nextTime;
+          player.dy += player.ay * nextTime;
+
+          ctx.fillStyle = COLORS[ i % COLORS.length ];
+          drawPlayer( ctx, player );
+
+          if ( 0 < brakeTime && i == Constants.Steps - 1 ) {
+            const stopPlayer = Object.assign( {}, player );
+            stopPlayer.x += stopPlayer.dx * brakeTime + 0.5 * stopPlayer.ax * brakeTime ** 2;
+            stopPlayer.y += stopPlayer.dy * brakeTime + 0.5 * stopPlayer.ay * brakeTime ** 2;
+            
+            ctx.strokeStyle = willStop ? 'red' : 'yellow';
+            drawPlayer( ctx, stopPlayer, false );
+          }
+        }
+
+
+        // if ( i == Constants.Steps - 1 ) {
+        //   const A_LEN = 10000, V_LEN = 100, TEXT_OFFSET = 0.2;
+
+        //   ctx.font = '0.08px Arial';
+        //   ctx.fillStyle = 'white';
+
+        //   ctx.fillText( `${ stopGravTerm } vs ${ stopFricTerm }`, stopPlayer.x, stopPlayer.y + TEXT_OFFSET );
+
+        //   ctx.beginPath();
+        //   ctx.lineTo( player.x, player.y );
+        //   ctx.lineTo( player.x + lineSlopeX * gravTerm * A_LEN, player.y + lineSlopeY * gravTerm * A_LEN );
+        //   ctx.strokeStyle = 'blue';
+        //   ctx.save(); {
+        //     ctx.lineWidth = 0.06;
+        //     ctx.stroke();
+        //   }
+        //   ctx.restore();
+
+        //   ctx.fillText( gravTerm, player.x + lineSlopeX * gravTerm * A_LEN, player.y + lineSlopeY * gravTerm * A_LEN + TEXT_OFFSET );
+
+        //   ctx.beginPath();
+        //   ctx.lineTo( player.x, player.y );
+        //   ctx.lineTo( player.x + lineSlopeX * fricTerm * A_LEN, player.y + lineSlopeY * fricTerm * A_LEN );
+        //   ctx.strokeStyle = 'red';
+        //   ctx.save(); {
+        //     ctx.lineWidth = 0.04;
+        //     ctx.stroke();
+        //   }
+        //   ctx.restore();
+
+        //   ctx.fillText( fricTerm, player.x + lineSlopeX * fricTerm * A_LEN, player.y + lineSlopeY * fricTerm * A_LEN + TEXT_OFFSET );
+
+        //   ctx.beginPath();
+        //   ctx.lineTo( player.x, player.y );
+        //   ctx.lineTo( player.x + player.ax * A_LEN, player.y + player.ay * A_LEN );
+        //   ctx.strokeStyle = 'green';
+        //   ctx.save(); {
+        //     ctx.lineWidth = 0.02;
+        //     ctx.stroke();
+        //   }
+        //   ctx.restore();
+
+        //   ctx.fillText( a, player.x + player.ax * A_LEN, player.y + player.ay * A_LEN + TEXT_OFFSET );
+
+        //   ctx.beginPath();
+        //   ctx.lineTo( player.x, player.y );
+        //   ctx.lineTo( player.x + player.dx * V_LEN, player.y + player.dy * V_LEN );
+        //   ctx.strokeStyle = 'white';
+        //   ctx.save(); {
+        //     ctx.lineWidth = 0.0125;
+        //     ctx.stroke();
+        //   }
+        //   ctx.restore();
+
+        //   // ctx.fillText( `${ player.dx }, ${ player.dy }`, player.x + player.dx * V_LEN, player.y + player.dy * V_LEN + TEXT_OFFSET );
+
+          
+        // }
       }
 
       
