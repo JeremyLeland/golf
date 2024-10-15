@@ -19,6 +19,8 @@
   import { Canvas } from '../src/Canvas.js';
   import { Line } from '../src/Line.js';
 
+  import * as Quartic from './quartic.js';
+
   const Constants = {
     Gravity: 3e-5,
     RollFriction: 1,
@@ -252,7 +254,8 @@
 
     // https://www.symbolab.com/solver/expand-calculator/expand%20%5Cleft(%5Cfrac%7B1%7D%7B2%7Dat%5E%7B2%7D%2Bvt%2B%5Cleft(s-p%5Cright)%5Cright)%5E%7B2%7D%2B%5Cleft(%5Cfrac%7B1%7D%7B2%7Dbt%5E%7B2%7D%2Bwt%2B%5Cleft(u-q%5Cright)%5Cright)%5E%7B2%7D-r%5E%7B2%7D?or=input
 
-    const times = solveQuartic3( A, B, C, D, E );
+    // const times = solveQuartic3( A, B, C, D, E );
+    const times = Quartic.quartic( [ A, B, C, D, E ] );
 
     console.log( times );
 
