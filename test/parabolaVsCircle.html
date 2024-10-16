@@ -88,11 +88,11 @@
     // Solve: ( ( (1/2) * ax*t^2 + vx*t + sx ) - cx )^2 + ( ( (1/2) * ay*t^2 + vy*t + sy ) - cy )^2 - r^2
     // https://www.symbolab.com/solver/expand-calculator/expand%20%5Cleft(%5Cfrac%7B1%7D%7B2%7Dat%5E%7B2%7D%2Bvt%2B%5Cleft(s-p%5Cright)%5Cright)%5E%7B2%7D%2B%5Cleft(%5Cfrac%7B1%7D%7B2%7Dbt%5E%7B2%7D%2Bwt%2B%5Cleft(u-q%5Cright)%5Cright)%5E%7B2%7D-r%5E%7B2%7D?or=input
 
-    const A = (1/4)*ax**2 + (1/4)*ay**2;
+    const A = ( ax**2 + ay**2 )/4;
     const B = ax*vx + ay*vy;
-    const C = vx**2 + ax*sx - ax*cx + vy**2 + ay*sy - ay*cy;
-    const D = -2*vx*cx + 2*vx*sx - 2*vy*cy + 2*vy*sy;
-    const E = -2*sx*cx + sx**2 + cx**2 - 2*sy*cy + sy**2 + cy**2 - r*r;
+    const C = vx**2 + ax*( sx - cx ) + vy**2 + ay*( sy - cy );
+    const D = 2*vx*( sx - cx ) + 2*vy*( sy - cy );
+    const E = sx*( sx - 2*cx ) + sy*( sy - 2*cy ) + cx**2 + cy**2 - r*r;
 
     console.log( `Solving quartic:\nA = ${ A }\nB = ${ B }\nC = ${ C }\nD = ${ D }\nE = ${ E }` );
 
