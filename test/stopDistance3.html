@@ -17,10 +17,10 @@
   import { Line } from '../src/Line.js';
 
   const loop = [
-    [ -1, -2 ],
+    [ -5, -2 ],
     [ 0, 0 ],
-    [ 5, 0 ],
-    [ 6, -2 ],
+    [ 4, 0 ],
+    [ 7, -1 ],
   ];
 
   const lines = [];
@@ -63,8 +63,8 @@
     const player = {
       x: ( currentLine.x1 + currentLine.x2 ) / 2 + Math.cos( currentLine.normalAngle ) * Constants.PlayerRadius,
       y: ( currentLine.y1 + currentLine.y2 ) / 2 + Math.sin( currentLine.normalAngle ) * Constants.PlayerRadius,
-      dx: START_SPEED * Math.cos( currentLine.slopeAngle ),
-      dy: START_SPEED * Math.sin( currentLine.slopeAngle ),
+      dx: 0,//START_SPEED * Math.cos( currentLine.slopeAngle ),
+      dy: 0,//START_SPEED * Math.sin( currentLine.slopeAngle ),
       ax: 0,
       ay: 0,
       radius: Constants.PlayerRadius,
@@ -126,12 +126,12 @@
         console.log( 'stopTime = ' + stopTime );
         console.log( 'willFullStop = ' + willFullStop );
 
-        if ( stopTime == 0 && willFullStop ) {
-          console.log( "Already stopped, can't go anywhere. breaking" );
-          break;
-        }
+        // if ( stopTime == 0 && willFullStop ) {
+        //   console.log( "Already stopped, can't go anywhere. breaking" );
+        //   break;
+        // }
 
-        if ( 0 < stopTime && stopTime < nextTime ) {
+        if ( 0 <= stopTime && stopTime < nextTime ) {
           nextLine = currentLine;
 
           player.x += player.dx * stopTime + 0.5 * player.ax * stopTime ** 2;
@@ -185,22 +185,6 @@
     }
     else {
       ctx.stroke();
-    }
-  }
-
-  function getTime( speed, accel, dist ) {
-    // https://physics.info/motion-equations/
-    // t = ( -v0 +- Math.sqrt( v0*v0 + 2 * a * dist ) ) / a
-    const disc = Math.pow( speed, 2 ) + 2 * accel * dist;
-
-    if ( disc < EPSILON ) {
-      return Infinity;
-    }
-    else {
-      const dt1 = ( -speed - Math.sqrt( disc ) ) / accel;
-      const dt2 = ( -speed + Math.sqrt( disc ) ) / accel;
-
-      return dt1 < dt2 && EPSILON <= dt1 ? dt1 : dt2;
     }
   }
 

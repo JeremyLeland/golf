@@ -235,7 +235,7 @@ function solveQuadratic( A, B, C ) {
       const t0 = ( -B - Math.sqrt( disc ) ) / ( 2 * A );
       const t1 = ( -B + Math.sqrt( disc ) ) / ( 2 * A );
       
-      return t1 < 0 || t0 < t1 ? t0 : t1;
+      return t0 < 0 ? t1 : t0;
     }
   }
 }
