@@ -17,7 +17,7 @@
   import { Line } from '../src/Line.js';
 
   const loop = [
-    [ -4, -2 ],
+    [ -1, -2 ],
     [ 0, 0 ],
     [ 5, 0 ],
     [ 6, -2 ],
@@ -58,8 +58,8 @@
 
   canvas.draw = ( ctx ) => {
     
-    let currentLine = lines[ 0 ];
-    const START_SPEED = 0.02;
+    let currentLine = lines[ 2 ];
+    const START_SPEED = -0.02;
     const player = {
       x: ( currentLine.x1 + currentLine.x2 ) / 2 + Math.cos( currentLine.normalAngle ) * Constants.PlayerRadius,
       y: ( currentLine.y1 + currentLine.y2 ) / 2 + Math.sin( currentLine.normalAngle ) * Constants.PlayerRadius,
@@ -81,7 +81,7 @@
 
     let dt = Constants.Time;
 
-    const COLORS = [ 'orange', 'yellow', 'blue', 'purple' ];
+    const COLORS = [ 'orange', 'green', 'blue', 'purple' ];
     for ( let step = 0; step < 5; step ++ ) {
       console.log( `=== Step ${ step } ( dt = ${ dt } ) ===` );
 
@@ -110,23 +110,7 @@
         // See when we'd hit another line
         lines.forEach( ( line, index ) => {
           if ( currentLine != line ) {
-            // TODO: Can this be more simply expressed? 
-            //       Does distance need to be done separately from time?
-            //       Or at least just use player object, rather than all the components
-            // const dist = line.getSlopeDist( player, dir * lineSlopeX, dir * lineSlopeY );
-
-            // const time = getTime( playerSpeed, a, dist );
-
-            const time = line.timeToHit_accel( player );
-
-            // console.log( time );
-
-            // const temp = Object.assign( {}, player );
-            // temp.x += player.dx * time + 0.5 * player.ax * time ** 2;
-            // temp.y += player.dy * time + 0.5 * player.ay * time ** 2;
-
-            // ctx.fillStyle = COLORS[ index ];
-            // drawPlayer( ctx, temp );
+            const time = line.timeToHit_accel( player );;
 
             if ( EPSILON < time && time < nextTime ) {
               nextLine = line;
