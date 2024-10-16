@@ -1,14 +1,18 @@
 <title>Rolling and stopping with multiple lines</title>
 <link rel="stylesheet" href="../style.css">
 
-<div id="ui" style="position: absolute;">
-  Gravity:
-  <input id="Gravity" type="number" min="0" max="0.0001" step="0.000001"/>
-  Friction:
-  <input id="RollFriction" type="number" min="0" max="10" step="0.1"/>
-  Time:
-  <input id="Time" type="range" min="0" max="1000" step="1"/>
-</div>
+<style>
+  #ui {
+    position: absolute;
+    display: grid;
+    grid-template-columns: 150px 75px;
+    text-align: center;
+  }
+</style>
+
+<div id="ui"></div>
+
+<input style="position: absolute; bottom: 0; width: 100%" id="time" type="range" min="0" value="500" max="3000" step="1"/>
 
 <script type="module">
   import { Canvas } from '../src/Canvas.js';
@@ -18,8 +22,8 @@
 
   const loop = [
     [ -1, -2 ],
-    [ 0, 0 ],
-    [ 5, 0 ],
+    [ 0, 2 ],
+    [ 5, 2 ],
     [ 6, -2 ],
   ];
 
@@ -39,18 +43,29 @@
     BounceFriction: 0.05,
     BounceDamping: 0.7,
     MinBounceSpeed: 5e-4,
-    PlayerRadius: 0.1,
-    Time: 500,
   };
 
-  for ( const val in Constants ) {
-    const ui = document.getElementById( val );
-    if ( ui ) {
-      ui.value = Constants[ val ];
+  const PlayerDefault = { x: -0.5, y: -1.5, dx: 0, dy: 0, ax: 0, ay: 0, radius: 0.1 };
+
+  makeUIFrom( Constants );
+  makeUIFrom( PlayerDefault );
+
+  function makeUIFrom( vals ) {
+    const uiDiv = document.getElementById( 'ui' );
+
+    for ( const val in vals ) {
+      const ui = document.createElement( 'input' );
+      ui.type = 'number';
+      ui.step = 0.01;
+      
+      ui.value = vals[ val ];
       ui.addEventListener( 'input', e => {
-        Constants[ val ] = +e.target.value;
+        vals[ val ] = +e.target.value;
         canvas.redraw();
       } );
+
+      uiDiv.appendChild( document.createTextNode( val ) );
+      uiDiv.appendChild( ui );
     }
   }
 
@@ -60,18 +75,13 @@
   canvas.scrollX = SIZE / 2;
   canvas.scrollY = SIZE / 2;
 
+  const timeSlider = document.getElementById( 'time' );
+  timeSlider.addEventListener( 'input', e => canvas.redraw() );
+
   canvas.draw = ( ctx ) => {
     let currentLine = null;//lines[ 2 ];
     const START_SPEED = -0.02;
-    const player = {
-      x: 2,
-      y: -1,
-      dx: 0,
-      dy: 0,
-      ax: 0,
-      ay: 0,
-      radius: Constants.PlayerRadius,
-    };
+    const player = Object.assign( {}, PlayerDefault );
 
     ctx.lineWidth = 0.1 * canvas.zoom;
     lines.forEach( line => {
@@ -82,10 +92,10 @@
     ctx.fillStyle = 'tan';
     drawPlayer( ctx, player );
 
-    let dt = Constants.Time;
+    let dt = +timeSlider.value;
 
     const COLORS = [ 'orange', 'green', 'blue', 'purple' ];
-    for ( let step = 0; step < 5; step ++ ) {
+    for ( let step = 0; step < 10; step ++ ) {
       console.log( `=== Step ${ step } ( dt = ${ dt } ) ===` );
 
       let nextTime = dt, nextLine = null;
@@ -103,7 +113,7 @@
         if ( playerSpeed < Constants.MinBounceSpeed ||
              Math.abs( deltaAngle( slopeAngle, playerAngle ) )           < Constants.RollAngle ||
              Math.abs( deltaAngle( playerAngle, slopeAngle + Math.PI ) ) < Constants.RollAngle ) {  
-          console.log( 'Rolling' );
+          console.log( '  Rolling' );
 
           const dir = player.dx < 0 ? -1 : 1 ;
           
@@ -121,13 +131,13 @@
           stopTime = dir * playerSpeed / -a;
           willFullStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
           
-          console.log( 'stopTime = ' + stopTime );
-          console.log( 'willFullStop = ' + willFullStop );
+          console.log( '    stopTime = ' + stopTime );
+          console.log( '    willFullStop = ' + willFullStop );
         }
 
         // Bounce
         else {
-          console.log( 'Bouncing' );
+          console.log( '  Bouncing' );
 
           const normalAngle = currentLine.normalAngle;
           const normX = Math.cos( normalAngle );
@@ -136,10 +146,14 @@
           const vDotN = player.dx * normX + player.dy * normY;
           const vDotF = player.dx * lineSlopeX + player.dy * lineSlopeY;
 
+          // console.log( `    Before = ${ JSON.stringify( player ) }` );
+
           player.dx -= 2 * vDotN * normX * Constants.BounceDamping + vDotF * lineSlopeX * Constants.BounceFriction;
           player.dy -= 2 * vDotN * normY * Constants.BounceDamping + vDotF * lineSlopeY * Constants.BounceFriction;
+          player.ax = 0;
+          player.ay = Constants.Gravity;
 
-          // console.log( `After bounce, player = ${ JSON.stringify( player ) }` );
+          // console.log( `    After = ${ JSON.stringify( player ) }` );
 
           currentLine = null;
         }
@@ -155,7 +169,7 @@
         if ( currentLine != line ) {
           const time = line.timeToHit_accel( player );;
 
-          console.log( `  Would hit line ${ JSON.stringify( line ) } at ${ time }` );
+          // console.log( `  Would hit line ${ JSON.stringify( line ) } at ${ time }` );
 
           // if ( EPSILON < time && time < nextTime ) {
           if ( 0 < time && time < nextTime ) {
@@ -166,7 +180,7 @@
       } );
 
       if ( 0 <= stopTime && stopTime < nextTime ) {
-        console.log( `Will stop in ${ stopTime }` );
+        console.log( `  Will stop in ${ stopTime }` );
         nextLine = currentLine;
 
         player.x += player.dx * stopTime + 0.5 * player.ax * stopTime ** 2;
@@ -190,7 +204,7 @@
         }
       }
       else {
-        console.log( `Will hit line ${ JSON.stringify( nextLine) } in ${ nextTime }` );
+        console.log( `  Will hit line ${ JSON.stringify( nextLine) } in ${ nextTime }` );
 
         player.x += player.dx * nextTime + 0.5 * player.ax * nextTime ** 2;
         player.y += player.dy * nextTime + 0.5 * player.ay * nextTime ** 2;
@@ -217,7 +231,7 @@
 
   function drawPlayer( ctx, player, fill = true ) {
     ctx.beginPath();
-    ctx.arc( player.x, player.y, Constants.PlayerRadius, 0, Math.PI * 2 );
+    ctx.arc( player.x, player.y, player.radius, 0, Math.PI * 2 );
     ctx.closePath();
 
     if ( fill ) {
