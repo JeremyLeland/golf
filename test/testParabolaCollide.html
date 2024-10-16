@@ -19,7 +19,7 @@
   import { Canvas } from '../src/Canvas.js';
   import { Line } from '../src/Line.js';
 
-  import * as Quartic from './quartic.js';
+  import * as Quartic from '../lib/quartic.js';
 
   const Constants = {
     Gravity: 3e-5,
@@ -37,9 +37,9 @@
 
   const a = Constants.Gravity * ( gravTerm - fricTerm );
 
-  const entity = { x: 1.85, y: -1.1, dx: 0, dy: 0, ax: a * lineSlopeX, ay: a * lineSlopeY, radius: Constants.PlayerRadius };
-  // const entity = { x: 2.2, y: 0.7, dx: 1, dy: 0, ax: 0, ay: 0.5, radius: Constants.PlayerRadius };
-
+  // const entity = { x: 1.85, y: -1.1, dx: 0, dy: 0, ax: a * lineSlopeX, ay: a * lineSlopeY, radius: Constants.PlayerRadius };
+  const entity = { x: 0.1, y: 0.1, dx: 0.1, dy: 0.1, ax: 0.1, ay: 0.1, radius: Constants.PlayerRadius };
+  const line = new Line( 1, 3, 2, 3 );
 
   const uiDiv = document.getElementById( 'ui' );
 
@@ -67,7 +67,7 @@
     uiDiv.appendChild( ui );
   }
 
-  const line = new Line( 1, 3, 3, 2 );
+  
   
   const SIZE = 10;
   const canvas = new Canvas();
@@ -178,6 +178,8 @@
       const times = parabolaVsCircle( entity.x, entity.y, entity.dx, entity.dy, entity.ax, entity.ay, line.x2, line.y2, entity.radius );
       ctx.fillStyle = 'yellow';
 
+      // drawPlayer( ctx, entity.x, entity.y );
+
       times.forEach( time => {
         const tx = entity.x + entity.dx * time + 0.5 * entity.ax * time ** 2;
         const ty = entity.y + entity.dy * time + 0.5 * entity.ay * time ** 2;
@@ -243,16 +245,16 @@
   } );
 
   function parabolaVsCircle( sx, sy, vx, vy, ax, ay, cx, cy, r ) {
-    const A = (1/4)*ax*ax + (1/4)*ay*ay;
-    const B = ax*vx + ay*vy;
-    //const C = (1/2)*ax*(sx - 2*cx) + vx + (1/2)*ax*sx + (1/2)*ay*(sy - 2*cy) + vy + (1/2)*ay*sy;
-    const C = vx*vx + ax*sx - ax*cx - vy*vy + ay*sy - ay*cy;
-    //const D = vx*(sx-2*cx) + vx*sx + vy*(sy - 2*cy) + vy*sy;
-    const D = -2*vx*cx + 2*vx*sx - 2*vy*cy + 2*vy*sy;
-    // const E = sx*(sx - 2*cx) + sy*(sy - 2*cy) + cx*cx + cy*cy - r*r;
-    const E = -2*sx*cx + sx*sx + cx*cx - 2*sy*cy + sy*sy + cy*cy - r*r;
-
+    // Solve: ( ( (1/2) * ax*t^2 + vx*t + sx ) - cx )^2 + ( ( (1/2) * ay*t^2 + vy*t + sy ) - cy )^2 - r^2
     // https://www.symbolab.com/solver/expand-calculator/expand%20%5Cleft(%5Cfrac%7B1%7D%7B2%7Dat%5E%7B2%7D%2Bvt%2B%5Cleft(s-p%5Cright)%5Cright)%5E%7B2%7D%2B%5Cleft(%5Cfrac%7B1%7D%7B2%7Dbt%5E%7B2%7D%2Bwt%2B%5Cleft(u-q%5Cright)%5Cright)%5E%7B2%7D-r%5E%7B2%7D?or=input
+
+    const A = (1/4)*ax**2 + (1/4)*ay**2;
+    const B = ax*vx + ay*vy;
+    const C = vx**2 + ax*sx - ax*cx + vy**2 + ay*sy - ay*cy;
+    const D = -2*vx*cx + 2*vx*sx - 2*vy*cy + 2*vy*sy;
+    const E = -2*sx*cx + sx**2 + cx**2 - 2*sy*cy + sy**2 + cy**2 - r*r;
+    
+    console.log( `Solving quartic:\nA = ${ A }\nB = ${ B }\nC = ${ C }\nD = ${ D }\nE = ${ E }` );
 
     // const times = solveQuartic3( A, B, C, D, E );
     const times = Quartic.quartic( [ A, B, C, D, E ] );
@@ -263,16 +265,23 @@
   }
 
   function solveQuadratic( A, B, C ) {
-    if ( A == 0 ) {
-      return -C / B;
+  if ( Math.abs( A ) < eps ) {
+    return -C / B;
+  }
+  else {
+    const disc = B * B - 4 * A * C;
+
+    if ( disc < 0 ) {
+      return Infinity;
     }
     else {
-      const t0 = ( -B - Math.sqrt( B * B - 4 * A * C ) ) / ( 2 * A );
-      const t1 = ( -B + Math.sqrt( B * B - 4 * A * C ) ) / ( 2 * A );
+      const t0 = ( -B - Math.sqrt( disc ) ) / ( 2 * A );
+      const t1 = ( -B + Math.sqrt( disc ) ) / ( 2 * A );
       
       return t1 < 0 || t0 < t1 ? t0 : t1;
     }
   }
+}
 
   function solveQuartic3( a4, a3, a2, a1, a0 ) {
     // https://en.wikipedia.org/wiki/Quartic_function#Converting_to_a_depressed_quartic

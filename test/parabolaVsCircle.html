@@ -1,0 +1,117 @@
+<title>Validate parabola vs circle function</title>
+<link rel="stylesheet" href="../style.css">
+
+<style>
+  #ui {
+    position: absolute;
+    display: grid;
+    grid-template-columns: 50px 75px;
+    text-align: center;
+  }
+</style>
+
+<div id="ui"></div>
+
+<script type="module">
+  import { Canvas } from '../src/Canvas.js';
+  import { Line } from '../src/Line.js';
+
+  import * as Quartic from '../lib/quartic.js';
+
+  // const vals = { sx: 0.1, sy: 0.1, vx: 0.1, vy: 0.1, ax: 0.1, ay: 0.1, cx: 2, cy: 3, r: 0.2 };
+  const vals = { sx: -0.1, sy: 0.1, vx: -0.15, vy: 0.25, ax: 0.15, ay: 0.75, cx: 0.5, cy: 2, r: 1 };
+  makeUIFrom( vals );
+
+  function makeUIFrom( vals ) {
+    const uiDiv = document.getElementById( 'ui' );
+
+    for ( const val in vals ) {
+      const ui = document.createElement( 'input' );
+      ui.type = 'number';
+      ui.step = 0.01;
+      
+      ui.value = vals[ val ];
+      ui.addEventListener( 'input', e => {
+        vals[ val ] = +e.target.value;
+        canvas.redraw();
+      } );
+
+      uiDiv.appendChild( document.createTextNode( val ) );
+      uiDiv.appendChild( ui );
+    }
+  }
+  
+  
+  const SIZE = 10;
+  const canvas = new Canvas();
+  canvas.zoom = 1 / SIZE;
+  canvas.scrollX = SIZE / 2;
+  canvas.scrollY = SIZE / 2;
+
+  canvas.draw = ( ctx ) => {
+    ctx.lineWidth = 0.2 * canvas.zoom;
+
+    ctx.beginPath();
+    ctx.arc( vals.cx, vals.cy, vals.r, 0, Math.PI * 2 );
+    ctx.closePath();
+    ctx.strokeStyle = 'white';
+    ctx.stroke();
+
+    ctx.beginPath();
+    for ( let t = -10; t <= 10; t += 0.1 ) {
+      const x = vals.sx + vals.vx*t + (1/2)*vals.ax*t**2;
+      const y = vals.sy + vals.vy*t + (1/2)*vals.ay*t**2;
+      ctx.lineTo( x, y );
+    }
+    ctx.strokeStyle = 'orange';
+    ctx.stroke();
+
+    const times = parabolaVsCircle( vals.sx, vals.sy, vals.vx, vals.vy, vals.ax, vals.ay, vals.cx, vals.cy, vals.r );
+
+    ctx.fillStyle = 'yellow';
+    times.forEach( t => {
+      const x = vals.sx + vals.vx*t + (1/2)*vals.ax*t**2;
+      const y = vals.sy + vals.vy*t + (1/2)*vals.ay*t**2;
+      ctx.beginPath();
+      ctx.arc( x, y, 0.05, 0, Math.PI * 2 );
+      ctx.fill();
+    } );
+  }
+
+  // NOTES:
+  //  - When B is not zero (+ or -), the points get further away (too early/too far)
+  //      - But this is fine: const vals = { sx: 0, sy: 0, vx: 0.25, vy: 0, ax: 0.15, ay: 0.75, cx: 0, cy: 2, r: 1 };
+  //      - Maybe it's the D that's messing it up?
+  //      - vx seems fine. vy seems to screw it up.
+
+  function parabolaVsCircle( sx, sy, vx, vy, ax, ay, cx, cy, r ) {
+    // Solve: ( ( (1/2) * ax*t^2 + vx*t + sx ) - cx )^2 + ( ( (1/2) * ay*t^2 + vy*t + sy ) - cy )^2 - r^2
+    // https://www.symbolab.com/solver/expand-calculator/expand%20%5Cleft(%5Cfrac%7B1%7D%7B2%7Dat%5E%7B2%7D%2Bvt%2B%5Cleft(s-p%5Cright)%5Cright)%5E%7B2%7D%2B%5Cleft(%5Cfrac%7B1%7D%7B2%7Dbt%5E%7B2%7D%2Bwt%2B%5Cleft(u-q%5Cright)%5Cright)%5E%7B2%7D-r%5E%7B2%7D?or=input
+
+    const A = (1/4)*ax**2 + (1/4)*ay**2;
+    const B = ax*vx + ay*vy;
+    const C = vx**2 + ax*sx - ax*cx + vy**2 + ay*sy - ay*cy;
+    const D = -2*vx*cx + 2*vx*sx - 2*vy*cy + 2*vy*sy;
+    const E = -2*sx*cx + sx**2 + cx**2 - 2*sy*cy + sy**2 + cy**2 - r*r;
+
+    console.log( `Solving quartic:\nA = ${ A }\nB = ${ B }\nC = ${ C }\nD = ${ D }\nE = ${ E }` );
+
+    let closest = Infinity;
+
+    const times = Quartic.quartic( [ A, B, C, D, E ] );
+
+    console.log( times );
+
+    return times;
+
+    // times.forEach( time => {
+    //   if ( 0 < time && time < closest ) {
+    //     closest = time;
+    //   }
+    // } );
+
+    // return closest;
+  }
+
+  
+</script>
