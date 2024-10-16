@@ -1,3 +1,5 @@
+import * as Quartic from '../lib/quartic.js';
+
 export class Line {
   constructor( x1, y1, x2, y2 ) {
     this.x1 = x1;
@@ -130,6 +132,65 @@ export class Line {
       }
     }
   }
+
+  timeToHit_accel( entity ) {
+    // https://math.stackexchange.com/questions/106705/find-intersections-between-parametrized-parabola-and-a-line
+    // If P = ( px, py ) and Q = ( qx, qy ), line PQ has equation ( x - px ) / ( qx - px ) = ( y - py ) / ( qy - py )
+
+    // 0.5 * ( ( a x q ) - ( a x p ) ) * t * t + ( ( v x q ) - ( v x p ) ) * t + ( ( r x q ) - ( r x p ) - ( p x q ) ) = 0
+    // axby - aybx = a x b
+    // 0.5 * ( ( ax*qy - ay*qx ) - ( ax*py - ay*px ) ) * t * t + ( ( vx*qy - vy*qx ) - ( vx*py - vy*px ) ) * t + ( ( rx*qy - ry*qx ) - ( rx*py - ry*px ) - ( pxqy - pyqx ) ) = 0
+
+    // A = 0.5 * ( ( ax*qy - ay*qx ) - ( ax*py - ay*px ) )
+    // B = ( ( vx*qy - vy*qx ) - ( vx*py - vy*px ) )
+    // C = ( ( rx*qy - ry*qx ) - ( rx*py - ry*px ) - ( px*qy - py*qx ) )
+
+    const normalAngle = this.normalAngle;
+    const normX = Math.cos( normalAngle );
+    const normY = Math.sin( normalAngle );
+
+    const px = this.x1 + normX * entity.radius;
+    const py = this.y1 + normY * entity.radius;
+    const qx = this.x2 + normX * entity.radius;
+    const qy = this.y2 + normY * entity.radius;
+
+    const w = qx - px;
+    const h = qy - py;
+
+    const ax = entity.ax;
+    const ay = entity.ay;
+    const vx = entity.dx;
+    const vy = entity.dy;
+    const sx = entity.x;
+    const sy = entity.y;
+
+    // TODO: The cross-product bit doesn't work for vertical lines...how to handle?
+    // Maybe see https://www.nagwa.com/en/explainers/516147029054/
+    // "Suppose that we are given parametric equations 𝑥=𝑓(𝑡), 𝑦=𝑔(𝑡) of a curve and the equation of a 
+    // horizontal line 𝑦=𝑎 (𝑎 is a constant) or a vertical line 𝑥=𝑏 (𝑏 is a constant). In this case, 
+    // we can directly set the relevant parametric coordinate equation equal to the constant: 
+    // either 𝑓(𝑡)=𝑏 or 𝑔(𝑡)=𝑎. In both cases, we have a single equation that we can solve for 𝑡 as before."
+
+    const A = 0.5 * ( ( ax*qy - ay*qx ) - ( ax*py - ay*px ) );
+    const B = ( ( vx*qy - vy*qx ) - ( vx*py - vy*px ) );
+    const C = ( ( sx*qy - sy*qx ) - ( sx*py - sy*px ) - ( px*qy - py*qx ) );
+
+    const lineTime = solveQuadratic( A, B, C );
+
+    const lineX = sx + vx * lineTime + 0.5 * ax * lineTime * lineTime;
+    const lineY = sy + vy * lineTime + 0.5 * ay * lineTime * lineTime;
+    const closestOnLine = ( ( lineX - px ) * w + ( lineY - py ) * h ) / ( w * w + h * h );
+
+    if ( closestOnLine < 0 ) {
+      return parabolaVsCircle( entity.x, entity.y, entity.dx, entity.dy, entity.ax, entity.ay, this.x1, this.y1, entity.radius );
+    }
+    else if ( 1 < closestOnLine ) {
+      return parabolaVsCircle( entity.x, entity.y, entity.dx, entity.dy, entity.ax, entity.ay, this.x2, this.y2, entity.radius );
+    }
+    else {
+      return lineTime;
+    }
+  }
 }
 
 function timeToHitPoint( entity, cx, cy ) {
@@ -142,14 +203,7 @@ function timeToHitPoint( entity, cx, cy ) {
   const b = 2 * ( fX * dX + fY * dY ); 
   const c = ( fX * fX + fY * fY ) - Math.pow( entity.radius, 2 );
 
-  let disc = b * b - 4 * a * c;
-
-  if ( disc > 0 ) {
-    return ( -b - Math.sqrt( disc ) ) / ( 2 * a );
-  }
-  else {
-    return Infinity;
-  }
+  return solveQuadratic( a, b, c );
 }
 
 function getSlopeDistPoint( entity, slopeX, slopeY, cx, cy ) {
@@ -162,12 +216,53 @@ function getSlopeDistPoint( entity, slopeX, slopeY, cx, cy ) {
   const b = 2 * ( fX * dX + fY * dY ); 
   const c = ( fX * fX + fY * fY ) - Math.pow( entity.radius, 2 );
 
-  let disc = b * b - 4 * a * c;
+  return solveQuadratic( a, b, c );
+}
 
-  if ( disc >= 0 ) {
-    return ( -b - Math.sqrt( disc ) ) / ( 2 * a );
+const EPSILON = 1e-6;
+
+function solveQuadratic( A, B, C ) {
+  if ( Math.abs( A ) < EPSILON ) {
+    return -C / B;
   }
   else {
-    return Infinity;
+    const disc = B * B - 4 * A * C;
+
+    if ( disc < 0 ) {
+      return Infinity;
+    }
+    else {
+      const t0 = ( -B - Math.sqrt( disc ) ) / ( 2 * A );
+      const t1 = ( -B + Math.sqrt( disc ) ) / ( 2 * A );
+      
+      return t1 < 0 || t0 < t1 ? t0 : t1;
+    }
   }
+}
+
+function parabolaVsCircle( sx, sy, vx, vy, ax, ay, cx, cy, r ) {
+  // Solve: ( ( (1/2) * ax*t^2 + vx*t + sx ) - cx )^2 + ( ( (1/2) * ay*t^2 + vy*t + sy ) - cy )^2 - r^2
+  // https://www.symbolab.com/solver/expand-calculator/expand%20%5Cleft(%5Cfrac%7B1%7D%7B2%7Dat%5E%7B2%7D%2Bvt%2B%5Cleft(s-p%5Cright)%5Cright)%5E%7B2%7D%2B%5Cleft(%5Cfrac%7B1%7D%7B2%7Dbt%5E%7B2%7D%2Bwt%2B%5Cleft(u-q%5Cright)%5Cright)%5E%7B2%7D-r%5E%7B2%7D?or=input
+
+  const A = ( ax**2 + ay**2 )/4;
+  const B = ax*vx + ay*vy;
+  const C = vx**2 + ax*( sx - cx ) + vy**2 + ay*( sy - cy );
+  const D = 2*vx*( sx - cx ) + 2*vy*( sy - cy );
+  const E = sx*( sx - 2*cx ) + sy*( sy - 2*cy ) + cx**2 + cy**2 - r*r;
+
+  // console.log( `Solving quartic:\nA = ${ A }\nB = ${ B }\nC = ${ C }\nD = ${ D }\nE = ${ E }` );
+
+  let closest = Infinity;
+
+  const times = Quartic.quartic( [ A, B, C, D, E ] );
+
+  // console.log( times );
+
+  times.forEach( time => {
+    if ( 0 < time && time < closest ) {
+      closest = time;
+    }
+  } );
+
+  return closest;
 }

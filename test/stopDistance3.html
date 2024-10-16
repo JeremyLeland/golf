@@ -1,0 +1,223 @@
+<title>Rolling and stopping with multiple lines</title>
+<link rel="stylesheet" href="../style.css">
+
+<div id="ui" style="position: absolute;">
+  Gravity:
+  <input id="Gravity" type="number" min="0" max="0.0001" step="0.000001"/>
+  Friction:
+  <input id="RollFriction" type="number" min="0" max="10" step="0.1"/>
+  Time:
+  <input id="Time" type="range" min="0" max="5000" step="10"/>
+</div>
+
+<script type="module">
+  import { Canvas } from '../src/Canvas.js';
+  import { World } from '../src/World.js';
+  import * as Level from '../src/Level.js';
+  import { Line } from '../src/Line.js';
+
+  const loop = [
+    [ -4, -2 ],
+    [ 0, 0 ],
+    [ 5, 0 ],
+    [ 6, -2 ],
+  ];
+
+  const lines = [];
+  for ( let i = 0; i < loop.length; i ++ ) {
+    lines.push( 
+      new Line( ...loop[ i ], ...loop[ ( i + 1 ) % loop.length ] )
+    );
+  }
+
+  const EPSILON = 1e-6;
+
+  const Constants = {
+    Gravity: 3e-5,   // was 0.00001
+    RollFriction: 1,    // was 5
+    Time: 1000,
+    PlayerRadius: 0.1,
+  };
+
+  for ( const val in Constants ) {
+    const ui = document.getElementById( val );
+    if ( ui ) {
+      ui.value = Constants[ val ];
+      ui.addEventListener( 'input', e => {
+        Constants[ val ] = +e.target.value;
+        canvas.redraw();
+      } );
+    }
+  }
+
+  const SIZE = 7;
+  const canvas = new Canvas();
+  canvas.zoom = 1 / SIZE;
+  canvas.scrollX = SIZE / 2;
+  canvas.scrollY = SIZE / 2;
+
+  canvas.draw = ( ctx ) => {
+    
+    let currentLine = lines[ 0 ];
+    const START_SPEED = 0.02;
+    const player = {
+      x: ( currentLine.x1 + currentLine.x2 ) / 2 + Math.cos( currentLine.normalAngle ) * Constants.PlayerRadius,
+      y: ( currentLine.y1 + currentLine.y2 ) / 2 + Math.sin( currentLine.normalAngle ) * Constants.PlayerRadius,
+      dx: START_SPEED * Math.cos( currentLine.slopeAngle ),
+      dy: START_SPEED * Math.sin( currentLine.slopeAngle ),
+      ax: 0,
+      ay: 0,
+      radius: Constants.PlayerRadius,
+    };
+
+    ctx.lineWidth = 0.1 * canvas.zoom;
+    lines.forEach( line => {
+      ctx.strokeStyle = 'green';
+      line.draw( ctx );
+    } );
+
+    ctx.fillStyle = 'tan';
+    drawPlayer( ctx, player );
+
+    let dt = Constants.Time;
+
+    const COLORS = [ 'orange', 'yellow', 'blue', 'purple' ];
+    for ( let step = 0; step < 5; step ++ ) {
+      console.log( `=== Step ${ step } ( dt = ${ dt } ) ===` );
+
+      let nextTime = dt, nextLine = null;
+
+      if ( currentLine ) {
+        const slopeAngle = currentLine.slopeAngle;
+        const lineSlopeX = Math.cos( slopeAngle );
+        const lineSlopeY = Math.sin( slopeAngle );
+        
+        const dir = player.dx < 0 ? -1 : 1 ;
+        
+        const gravTerm = lineSlopeY;
+        const fricTerm = dir * Constants.RollFriction * lineSlopeX;
+        const a = Constants.Gravity * ( gravTerm - fricTerm );
+
+        player.ax = a * lineSlopeX;
+        player.ay = a * lineSlopeY;
+
+        const playerSpeed = dir * Math.hypot( player.dx, player.dy );
+
+        player.dx = lineSlopeX * playerSpeed;
+        player.dy = lineSlopeY * playerSpeed;
+
+
+        // See when we'd hit another line
+        lines.forEach( ( line, index ) => {
+          if ( currentLine != line ) {
+            // TODO: Can this be more simply expressed? 
+            //       Does distance need to be done separately from time?
+            //       Or at least just use player object, rather than all the components
+            // const dist = line.getSlopeDist( player, dir * lineSlopeX, dir * lineSlopeY );
+
+            // const time = getTime( playerSpeed, a, dist );
+
+            const time = line.timeToHit_accel( player );
+
+            // console.log( time );
+
+            // const temp = Object.assign( {}, player );
+            // temp.x += player.dx * time + 0.5 * player.ax * time ** 2;
+            // temp.y += player.dy * time + 0.5 * player.ay * time ** 2;
+
+            // ctx.fillStyle = COLORS[ index ];
+            // drawPlayer( ctx, temp );
+
+            if ( EPSILON < time && time < nextTime ) {
+              nextLine = line;
+              nextTime = time;
+            }
+          }
+        } );
+
+        // See when we'd stop rolling from friction
+        const stopTime = playerSpeed / -a;
+        const willFullStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
+        
+        console.log( 'stopTime = ' + stopTime );
+        console.log( 'willFullStop = ' + willFullStop );
+
+        if ( stopTime == 0 && willFullStop ) {
+          console.log( "Already stopped, can't go anywhere. breaking" );
+          break;
+        }
+
+        if ( 0 < stopTime && stopTime < nextTime ) {
+          nextLine = currentLine;
+
+          player.x += player.dx * stopTime + 0.5 * player.ax * stopTime ** 2;
+          player.y += player.dy * stopTime + 0.5 * player.ay * stopTime ** 2;
+
+          player.dx = 0;
+          player.dy = 0;
+
+          if ( willFullStop ) {
+            ctx.fillStyle = 'red';
+            drawPlayer( ctx, player );
+
+            console.log( 'Full stop, breaking' );
+            break;
+          }
+          else {
+            ctx.fillStyle = 'yellow';
+
+            console.log( 'Partial stop, going other direction' );
+            drawPlayer( ctx, player );
+          }
+        }
+        else {
+          console.log( `Will hit line ${ nextLine } in ${ nextTime }` );
+
+          player.x += player.dx * nextTime + 0.5 * player.ax * nextTime ** 2;
+          player.y += player.dy * nextTime + 0.5 * player.ay * nextTime ** 2;
+
+          player.dx += player.ax * nextTime;
+          player.dy += player.ay * nextTime;
+
+          ctx.fillStyle = COLORS[ step % COLORS.length ];
+          drawPlayer( ctx, player );
+        }
+      }
+      
+      currentLine = nextLine;
+      dt -= nextTime;
+    }
+  }
+
+  // canvas.redraw();
+
+  function drawPlayer( ctx, player, fill = true ) {
+    ctx.beginPath();
+    ctx.arc( player.x, player.y, Constants.PlayerRadius, 0, Math.PI * 2 );
+    ctx.closePath();
+
+    if ( fill ) {
+      ctx.fill();
+    }
+    else {
+      ctx.stroke();
+    }
+  }
+
+  function getTime( speed, accel, dist ) {
+    // https://physics.info/motion-equations/
+    // t = ( -v0 +- Math.sqrt( v0*v0 + 2 * a * dist ) ) / a
+    const disc = Math.pow( speed, 2 ) + 2 * accel * dist;
+
+    if ( disc < EPSILON ) {
+      return Infinity;
+    }
+    else {
+      const dt1 = ( -speed - Math.sqrt( disc ) ) / accel;
+      const dt2 = ( -speed + Math.sqrt( disc ) ) / accel;
+
+      return dt1 < dt2 && EPSILON <= dt1 ? dt1 : dt2;
+    }
+  }
+
+</script>
