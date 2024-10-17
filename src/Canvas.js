@@ -40,8 +40,11 @@ export class Canvas {
         this.#scale = Math.min( inlineSize, blockSize );
 
         // this might get messed up if writing mode is vertical
-        this.#offsetX = ( inlineSize - this.#scale ) / devicePixelRatio;
-        this.#offsetY = ( blockSize - this.#scale ) / devicePixelRatio;
+        // Why did we have devicePixelRatio in here before? Is it needed by Safari?
+        this.#offsetX = ( inlineSize - this.#scale );// / devicePixelRatio;
+        this.#offsetY = ( blockSize - this.#scale );// / devicePixelRatio;
+
+        console.log( 'offsetX = ' + this.#offsetX + ', offsetY = ' + this.#offsetY );
       } );
       
       this.redraw();
