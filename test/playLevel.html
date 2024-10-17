@@ -83,6 +83,18 @@
       ctx.fill();
       ctx.translate( -world.player.x, -world.player.y );
     }
+
+    ctx.fillStyle = 'white';
+    ctx.font = '1px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText( world.strokes, 0, -SIZE / 2 );
+    
+    if ( world.victory ) {
+      ctx.font = '2px Arial';
+      ctx.textBaseline = 'middle';
+      ctx.fillText( 'Victory!', 0, 0 );
+    }
   }
 
   canvas.start();
@@ -99,7 +111,7 @@
 
   
   canvas.canvas.addEventListener( 'pointerdown', e => {
-    if ( world.player.dx == 0 && world.player.dy == 0 ) {
+    if ( world.readyForInput ) {
       updateMousePos( e );
       
       dragStart ??= {
@@ -122,8 +134,10 @@
       const angle = Math.atan2( cy, cx );
       const dist = Math.hypot( cx, cy );
       
-      world.player.dx = SENSITIVITY * dist * Math.cos( angle );
-      world.player.dy = SENSITIVITY * dist * Math.sin( angle );
+      world.hitBall(
+        SENSITIVITY * dist * Math.cos( angle ),
+        SENSITIVITY * dist * Math.sin( angle )
+      );
       
       dragStart = null;
     }

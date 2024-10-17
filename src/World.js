@@ -22,6 +22,10 @@ export class World {
   
   player;
 
+  strokes = 0;
+  readyForInput = true;
+  victory = false;
+
   #level;
 
   #lines;
@@ -54,6 +58,13 @@ export class World {
     };
   }
 
+  hitBall( dx, dy ) {
+    this.player.dx = dx;
+    this.player.dy = dy;
+    this.readyForInput = false;
+    this.strokes ++;
+  }
+
   update( dt ) {
 
     // 0. See if we are already colliding with something
@@ -61,10 +72,8 @@ export class World {
     // -- LOOP (up to N times) --
     // 1. If we are colliding, are we rolling or bouncing?
     //    - Set dx/dy and ax/ay appropriately
-    //    - Find next collision
-    // 2. If we are not colliding
-    //    - Find next collision
-    // 3. Update ball until next collision (or dt)
+    // 2. Find when we'd stop from friction, find next collision
+    // 3. Update ball until stopping point or next collision (or until time runs out)
     // 4. Back to step 1
     
     if ( this.player ) {
@@ -134,6 +143,11 @@ export class World {
             stopTime = dir * playerSpeed / -a;
             willFullStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
             
+            if ( stopTime == 0 && willFullStop ) {
+              // console.log( 'Already fully stopped, breaking' );
+              break;
+            }
+
             // console.log( '    stopTime = ' + stopTime );
             // console.log( '    willFullStop = ' + willFullStop );
           }
@@ -182,7 +196,7 @@ export class World {
           }
         } );
   
-        if ( 0 <= stopTime && stopTime < nextTime ) {
+        if ( 0 < stopTime && stopTime < nextTime ) {
           // console.log( `  Will stop in ${ stopTime }` );
           nextLine = currentLine;
   
@@ -197,6 +211,17 @@ export class World {
             // drawPlayer( ctx, this.player );
   
             // console.log( 'Full stop, breaking' );
+            if ( !this.readyForInput ) {
+              if ( this.#level.goal &&
+                   this.#level.goal[ 0 ] < this.player.x && this.player.x < this.#level.goal[ 2 ] &&
+                   this.#level.goal[ 1 ] < this.player.y && this.player.y < this.#level.goal[ 3 ] ) {
+                this.victory = true;
+              }
+              else {
+                this.readyForInput = true;
+              }
+            }
+
             break;
           }
           else {
