@@ -17,6 +17,8 @@ const Constants = {
 
 
 export class World {
+
+  static Constants = Constants;
   
   player;
 
@@ -87,7 +89,7 @@ export class World {
 
         const proj = this.player.dx * normX + this.player.dy * normY;
 
-        console.log( 'proj = ' + proj );
+        // console.log( 'proj = ' + proj );
 
         if ( proj <= 0 ) { 
           this.player.x -= Math.cos( normalAngle ) * currentDist;
@@ -245,10 +247,10 @@ export class World {
       ctx.fillStyle = 'white';
       ctx.fill();
 
-      ctx.font = '0.4px Arial';
-      JSON.stringify( this.player ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
-        ctx.fillText( str, -7, -7 + 0.4 * index );
-      } );
+      // ctx.font = '0.4px Arial';
+      // JSON.stringify( this.player ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
+      //   ctx.fillText( str, -7, -7 + 0.4 * index );
+      // } );
     }
   }
 }
