@@ -20,19 +20,28 @@
   import * as Level from '../src/Level.js';
   import { Line } from '../src/Line.js';
 
-  const loop = [
-    [ -1, -2 ],
-    [ 0, 2 ],
-    [ 5, 2 ],
-    [ 6, -2 ],
+  const loops = [
+    [
+      [ -1, -2 ],
+      [ 0, 2 ],
+      [ 5, 2 ],
+      [ 6, -2 ],
+    ],
+    [
+      [ 3, 1 ],
+      [ 2, 1 ],
+      [ 2.5, 0.5 ],
+    ],
   ];
 
   const lines = [];
-  for ( let i = 0; i < loop.length; i ++ ) {
-    lines.push( 
-      new Line( ...loop[ i ], ...loop[ ( i + 1 ) % loop.length ] )
-    );
-  }
+  loops.forEach( loop => {
+    for ( let i = 0; i < loop.length; i ++ ) {
+      lines.push( 
+        new Line( ...loop[ i ], ...loop[ ( i + 1 ) % loop.length ] )
+      );
+    }
+  } );
 
   const EPSILON = 1e-6;
 
