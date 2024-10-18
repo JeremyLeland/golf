@@ -77,6 +77,11 @@
     world.update( dt );
   }
 
+  const pullGrad = canvas.ctx.createRadialGradient( 0, 0, 0, 0, 0, 2 );
+  pullGrad.addColorStop( 0, 'green' );
+  pullGrad.addColorStop( 0.5, 'yellow' );
+  pullGrad.addColorStop( 1, 'red' );
+
   canvas.draw = ( ctx ) => {
 
     ctx.font = '0.25px Arial';
@@ -173,6 +178,38 @@
     }
     else if ( mode == Mode.Play ) {
       world.draw( ctx );
+
+      if ( dragStart ) {
+        const cx = dragStart.x - mouse.x;
+        const cy = dragStart.y - mouse.y;
+        const angle = Math.atan2( cy, cx );
+        const dist = Math.hypot( cx, cy );
+
+        const offX =  Math.sin( angle ) * world.player.radius;
+        const offY = -Math.cos( angle ) * world.player.radius;
+
+        ctx.translate( world.player.x, world.player.y );
+        ctx.beginPath();
+        ctx.lineTo( offX, offY );
+        ctx.lineTo( -offX, -offY );
+        ctx.lineTo( -Math.cos( angle ) * dist, -Math.sin( angle ) * dist );
+
+        ctx.fillStyle = pullGrad;
+        ctx.fill();
+        ctx.translate( -world.player.x, -world.player.y );
+      }
+
+      ctx.fillStyle = 'white';
+      ctx.font = '1px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText( world.strokes, 0, -SIZE / 2 );
+      
+      if ( world.victory ) {
+        ctx.font = '2px Arial';
+        ctx.textBaseline = 'middle';
+        ctx.fillText( 'Victory!', 0, 0 );
+      }
     }    
   }
 
@@ -227,11 +264,15 @@
     y: 0,
   };
 
-  let spawnStart;
+  let dragStart;
 
-  canvas.canvas.addEventListener( 'pointerdown', e => {
+  function updateMousePos( e ) {
     mouse.x = canvas.getPointerX( e );
     mouse.y = canvas.getPointerY( e );
+  }
+
+  canvas.canvas.addEventListener( 'pointerdown', e => {
+    updateMousePos( e );
 
     if ( mode == Mode.Edit ) {
       hover = null;
@@ -331,18 +372,21 @@
       canvas.redraw();
     }
     else if ( mode == Mode.Play ) {
-      spawnStart = {
-        x: mouse.x,
-        y: mouse.y
-      };
+      if ( world.readyForInput ) {
+        updateMousePos( e );
+        
+        dragStart ??= {
+          x: mouse.x,
+          y: mouse.y
+        };
+      }
     }
   } );
 
   canvas.canvas.addEventListener( 'pointermove', e => {
     const lastX = mouse.x;
     const lastY = mouse.y;
-    mouse.x = canvas.getPointerX( e );
-    mouse.y = canvas.getPointerY( e );
+    updateMousePos( e )
     const moveX = mouse.x - lastX;
     const moveY = mouse.y - lastY;
 
@@ -395,14 +439,21 @@
       canvas.redraw();
     }
     else if ( mode == Mode.Play ) {
-      const VEL = 0.01;
-
-      Object.assign( world.player, {
-        x: spawnStart.x,
-        y: spawnStart.y,
-        dx: VEL * ( mouse.x - spawnStart.x ),
-        dy: VEL * ( mouse.y - spawnStart.y ),
-      } );
+      if ( dragStart ) {
+        const SENSITIVITY = 0.01;
+        
+        const cx = dragStart.x - mouse.x;
+        const cy = dragStart.y - mouse.y;
+        const angle = Math.atan2( cy, cx );
+        const dist = Math.hypot( cx, cy );
+        
+        world.hitBall(
+          SENSITIVITY * dist * Math.cos( angle ),
+          SENSITIVITY * dist * Math.sin( angle )
+        );
+        
+        dragStart = null;
+      }
     }
   } );
 
