@@ -251,6 +251,11 @@ export class World {
           break;
         }
       }
+
+      // Respawn if out of bounds (TODO: define bounds in level?)
+      if ( this.player.y > 40 ) {
+        this.respawn();
+      }
     }
   }
 
