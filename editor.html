@@ -2,20 +2,21 @@
 <link rel="stylesheet" href="./style.css">
 
 <style>
-  #canvas {
+  #ui {
     position: absolute;
-    left: 0;
-    top: 0;
-    z-index: -1;
+    /* display: grid;
+    grid-template-columns: 150px 75px;
+    text-align: center; */
   }
 </style>
 
-<canvas id="canvas"></canvas>
-<button id="play">Play</button>
-<button id="save">Save</button>
-<button id="load">Load</button>
-<button id="undo">Undo</button>
-<button id="clear">Clear</button>
+<div id="ui">
+  <button id="play">Play</button>
+  <button id="save">Save</button>
+  <button id="load">Load</button>
+  <button id="undo">Undo</button>
+  <button id="clear">Clear</button>  
+</div>
 
 <script type="module">
   import { Canvas } from './src/Canvas.js';
@@ -422,6 +423,18 @@
 
       active = null;
     }
+    else {
+      if ( e.wheelDelta < 0 ) {
+        canvas.zoom *= 0.9;
+      }
+      else {
+        canvas.zoom /= 0.9;
+      }
+
+      // TODO: Base this on mouse location? (so we zoom in on area?)
+      canvas.scrollX = 1 / canvas.zoom / 2;
+      canvas.scrollY = 1 / canvas.zoom / 2;
+    }
 
     canvas.redraw();
   } );
@@ -655,6 +668,7 @@
     },
     'clear': ( e ) => {
       editorState = newEditorState();
+      canvas.redraw();
     }
   }
 

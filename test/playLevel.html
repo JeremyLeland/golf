@@ -42,7 +42,7 @@
   }
 
 
-  let world = new World( await ( await fetch( '../levels/test1.json' ) ).json() )
+  let world = new World( await ( await fetch( '../levels/test3.json' ) ).json() )
 
   const SIZE = 16;
   const canvas = new Canvas();
@@ -52,7 +52,7 @@
   
   let dragStart;
 
-  const pullGrad = canvas.ctx.createRadialGradient( 0, 0, 0, 0, 0, 1 );
+  const pullGrad = canvas.ctx.createRadialGradient( 0, 0, 0, 0, 0, 2 );
   pullGrad.addColorStop( 0, 'green' );
   pullGrad.addColorStop( 0.5, 'yellow' );
   pullGrad.addColorStop( 1, 'red' );
