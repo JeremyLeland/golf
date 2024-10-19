@@ -4,17 +4,6 @@ export const ResizeType = {
   SW: 6, S: 5, SE: 4,
 };
 
-// export const EditType = {
-//   AddPoint: 'AddPoint',
-//   MovePoint: 'MovePoint',
-//   DeletePoint: 'DeletePoint',
-//   AddLoop: 'AddLoop',
-//   MoveLoop: 'MoveLoop',
-//   ResizeLoop: 'ResizeLoop',
-//   RotateLoop: 'RotateLoop',
-//   DeleteLoop: 'DeleteLoop',
-// };
-
 export const Edit = {
   AddPoint: {
     name: 'AddPoint',
@@ -56,19 +45,23 @@ export const Edit = {
     apply: ( level, cmd ) => deleteLoop( level, cmd.loopIndex             ),
     undo:  ( level, cmd ) => addLoop   ( level, cmd.loopIndex, cmd.points ),
   },
-
   MoveSpawn: {
     name: 'MoveSpawn',
     apply: ( level, cmd ) => moveSpawn( level,  cmd.dx,  cmd.dy ),
     undo:  ( level, cmd ) => moveSpawn( level, -cmd.dx, -cmd.dy ),
-  }
+  },
+  MoveGoal: {
+    name: 'MoveGoal',
+    apply: ( level, cmd ) => moveGoal( level,  cmd.dx,  cmd.dy ),
+    undo:  ( level, cmd ) => moveGoal( level, -cmd.dx, -cmd.dy ),
+  },
 };
 
 export function newLevel() {
   return {
     loops: [],
     spawn: [ 0, 0 ],
-    // goal - default?
+    goal: [ -0.3, -0.4, 0.3, 0.4 ],
   };
 }
 
@@ -158,6 +151,13 @@ function deleteLoop( level, loopIndex ) {
 function moveSpawn( level, dx, dy ) {
   level.spawn[ 0 ] += dx;
   level.spawn[ 1 ] += dy;
+}
+
+function moveGoal( level, dx, dy ) {
+  level.goal[ 0 ] += dx;
+  level.goal[ 1 ] += dy;
+  level.goal[ 2 ] += dx;
+  level.goal[ 3 ] += dy;
 }
 
 function getBounds( loop ) {

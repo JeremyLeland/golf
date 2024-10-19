@@ -490,17 +490,40 @@
     canvas.redraw();
   } );
 
+
+  const keyCommands = {
+    's': () => applyCommand( {
+      type: 'MoveSpawn',
+      dx: mouse.x - editorState.level.spawn[ 0 ],
+      dy: mouse.y - editorState.level.spawn[ 1 ],
+    } ),
+    'g': () => applyCommand( {
+      type: 'MoveGoal',
+      dx: mouse.x - ( editorState.level.goal[ 0 ] + editorState.level.goal[ 2 ] ) / 2,
+      dy: mouse.y - ( editorState.level.goal[ 1 ] + editorState.level.goal[ 3 ] ) / 2,
+    } ),
+  }
+
   document.addEventListener( 'keydown', e => {
-    if ( e.key == 's' ) {
-      applyCommand( {
-        type: 'MoveSpawn',
-        dx: mouse.x - editorState.level.spawn[ 0 ],
-        dy: mouse.y - editorState.level.spawn[ 1 ],
-      } );
+    const func = keyCommands[ e.key ];
+    if ( func ) {
+      func();
+      canvas.redraw();
+    }
+  } );
+
+  const MERGE_FIELDS = [ 'dx', 'dy', 'angle' ];
+  function canMergeCommands( a, b ) {
+    for ( const field in a ) {
+      if ( !MERGE_FIELDS.includes( field ) ) {
+        if ( a[ field ] != b[ field ] ) {
+          return false;
+        }
+      }
     }
 
-    canvas.redraw();
-  } );
+    return true;
+  }
 
   function applyCommand( cmd ) {
     console.log( 'Applying: ' + JSON.stringify( cmd ) );
@@ -508,28 +531,15 @@
 
     const lastCmd = editorState.undoStack[ editorState.undoStack.length - 1 ];
 
-    if ( lastCmd == null ||
-         cmd.type != lastCmd.type || 
-         cmd.loopIndex != lastCmd.loopIndex || 
-         cmd.pointIndex != lastCmd.pointIndex ||
-         cmd.resizeType != lastCmd.resizeType ||
-         cmd.x != lastCmd.x ||
-         cmd.y != lastCmd.y ) {
-      console.log( 'Pushing to stack: ' + JSON.stringify( cmd ) );
+    if ( lastCmd && canMergeCommands( lastCmd, cmd ) ) {
+      console.log( `Merging new command ${ JSON.stringify( cmd ) } with previous command ${ JSON.stringify( lastCmd ) }` );
 
-      // Copy command before adding to stack, to make sure it can't get messed with after the fact
-      const thisCmd = Object.assign( {}, cmd );
-      editorState.undoStack.push( thisCmd );
-    }
-    else if ( cmd.type == 'MovePoint' || cmd.type == 'MoveLoop' || cmd.type == 'ResizeLoop' ) {
-      lastCmd.dx += cmd.dx;
-      lastCmd.dy += cmd.dy;
-    }
-    else if ( cmd.type == 'RotateLoop') {
-      lastCmd.angle += cmd.angle;
+      if ( lastCmd.dx != null )     lastCmd.dx += cmd.dx;
+      if ( lastCmd.dy != null )     lastCmd.dy += cmd.dy;
+      if ( lastCmd.angle != null )  lastCmd.angle += cmd.angle;
     }
     else {
-      console.log( 'Still pushing to stack: ' + JSON.stringify( cmd ) );
+      console.log( 'Pushing to stack: ' + JSON.stringify( cmd ) );
 
       // Copy command before adding to stack, to make sure it can't get messed with after the fact
       const thisCmd = Object.assign( {}, cmd );
