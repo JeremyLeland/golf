@@ -24,6 +24,8 @@
   import * as Level from './src/Level.js';
   import { Line } from './src/Line.js';
 
+  import { Constants } from './src/Golf.js';
+
   const EditorStateKey = 'golfEditorState';
 
   const EditType = {
@@ -100,7 +102,7 @@
       if ( spawn ) {
         ctx.fillStyle = '#fffa';
         ctx.beginPath();
-        ctx.arc( spawn[ 0 ], spawn[ 1 ], 0.2, 0, Math.PI * 2 );
+        ctx.arc( spawn[ 0 ], spawn[ 1 ], Constants.Player.Radius, 0, Math.PI * 2 );
         ctx.fill();
       }
 
@@ -183,7 +185,7 @@
         const cx = dragStart.x - mouse.x;
         const cy = dragStart.y - mouse.y;
         const angle = Math.atan2( cy, cx );
-        const dist = Math.hypot( cx, cy );
+        const dist = Math.min( Constants.Player.MaxHit, Math.hypot( cx, cy ) );
 
         const offX =  Math.sin( angle ) * world.player.radius;
         const offY = -Math.cos( angle ) * world.player.radius;
@@ -445,7 +447,7 @@
         const cx = dragStart.x - mouse.x;
         const cy = dragStart.y - mouse.y;
         const angle = Math.atan2( cy, cx );
-        const dist = Math.hypot( cx, cy );
+        const dist = Math.min( Constants.Player.MaxHit, Math.hypot( cx, cy ) );
         
         world.hitBall(
           SENSITIVITY * dist * Math.cos( angle ),

@@ -1,15 +1,7 @@
 import { Line } from './Line.js';
+import { Constants } from './Golf.js';
 
 const EPSILON = 1e-6;
-
-const Constants = {
-  Gravity: 3e-5,
-  RollAngle: Math.PI / 32,
-  RollFriction: 1,
-  BounceFriction: 0.05,
-  BounceDamping: 0.7,
-  MinBounceSpeed: 5e-4,
-};
 
 
 // TODO: Don't roll across large angle changes, bounce off instead
@@ -17,9 +9,6 @@ const Constants = {
 
 
 export class World {
-
-  static Constants = Constants;
-  
   player;
 
   strokes = 0;
@@ -54,7 +43,7 @@ export class World {
       dy: 0, 
       ax: 0, 
       ay: 0, 
-      radius: 0.2
+      radius: 0.1
     };
   }
 
@@ -267,8 +256,8 @@ export class World {
       ctx.fill();
     } );
 
-    ctx.strokeStyle = '#fff8';
-    this.#lines.forEach( line => line.draw( ctx ) );
+    // ctx.strokeStyle = '#fff8';
+    // this.#lines.forEach( line => line.draw( ctx ) );
 
     if ( this.player ) {
       ctx.beginPath();
