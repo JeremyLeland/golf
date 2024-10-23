@@ -149,6 +149,12 @@ export class Line {
     const normX = Math.cos( normalAngle );
     const normY = Math.sin( normalAngle );
 
+    // Skip if we are coming from behind the line (to hopefully avoid issues with corners)
+    const proj = entity.dx * normX + entity.dy * normY;
+    if ( proj >= 0 ) {
+      return Infinity;
+    }
+
     const px = this.x1 + normX * entity.radius;
     const py = this.y1 + normY * entity.radius;
     const qx = this.x2 + normX * entity.radius;

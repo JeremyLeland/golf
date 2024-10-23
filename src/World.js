@@ -2,6 +2,7 @@ import { Line } from './Line.js';
 import { Constants } from './Golf.js';
 
 const EPSILON = 1e-6;
+const LOGGING = false;
 
 let pullGrad;
 
@@ -18,6 +19,7 @@ export class World {
 
   #hitDrag;
 
+  #debug = {}
 
   constructor( level ) {
     this.#level = level;
@@ -110,7 +112,7 @@ export class World {
 
         const proj = this.player.dx * normX + this.player.dy * normY;
 
-        // console.log( 'proj = ' + proj );
+        log( 'proj = ' + proj );
 
         if ( proj <= 0 ) { 
           this.player.x -= Math.cos( normalAngle ) * currentDist;
@@ -132,41 +134,49 @@ export class World {
   
           const playerAngle = Math.atan2( this.player.dy, this.player.dx );
           const playerSpeed = Math.hypot( this.player.dx, this.player.dy );
+
+          this.#debug.playerSpeed = playerSpeed;
   
           // Roll
           if ( playerSpeed < Constants.MinBounceSpeed ||
                Math.abs( deltaAngle( slopeAngle, playerAngle ) )           < Constants.RollAngle ||
                Math.abs( deltaAngle( playerAngle, slopeAngle + Math.PI ) ) < Constants.RollAngle ) {  
-            // console.log( '  Rolling' );
+            log( '  Rolling' );
   
             const dir = this.player.dx < 0 ? -1 : 1 ;
             
             const gravTerm = lineSlopeY;
             const fricTerm = dir * Constants.RollFriction * lineSlopeX;
             const a = Constants.Gravity * ( gravTerm - fricTerm );
+
+            this.#debug.a = a;
   
             this.player.ax = a * lineSlopeX;
             this.player.ay = a * lineSlopeY;
   
-            this.player.dx = dir * playerSpeed * lineSlopeX;
-            this.player.dy = dir * playerSpeed * lineSlopeY;
+            // TODO: Is this sometimes preventing us from stopping when going left?
+            // this.player.dx = dir * playerSpeed * lineSlopeX;
+            // this.player.dy = dir * playerSpeed * lineSlopeY;
   
             // See when we'd stop rolling from friction
             stopTime = dir * playerSpeed / -a;
             willFullStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
+
+            this.#debug.stopTime = stopTime;
+            this.#debug.willFullStop = willFullStop;
             
             if ( stopTime == 0 && willFullStop ) {
-              // console.log( 'Already fully stopped, breaking' );
+              log( 'Already fully stopped, breaking' );
               break;
             }
 
-            // console.log( '    stopTime = ' + stopTime );
-            // console.log( '    willFullStop = ' + willFullStop );
+            log( '    stopTime = ' + stopTime );
+            log( '    willFullStop = ' + willFullStop );
           }
   
           // Bounce
           else {
-            // console.log( '  Bouncing' );
+            log( '  Bouncing' );
   
             const normalAngle = currentLine.normalAngle;
             const normX = Math.cos( normalAngle );
@@ -175,14 +185,14 @@ export class World {
             const vDotN = this.player.dx * normX + this.player.dy * normY;
             const vDotF = this.player.dx * lineSlopeX + this.player.dy * lineSlopeY;
   
-            // console.log( `    Before = ${ JSON.stringify( this.player ) }` );
+            // log( `    Before = ${ JSON.stringify( this.player ) }` );
   
             this.player.dx -= 2 * vDotN * normX * Constants.BounceDamping + vDotF * lineSlopeX * Constants.BounceFriction;
             this.player.dy -= 2 * vDotN * normY * Constants.BounceDamping + vDotF * lineSlopeY * Constants.BounceFriction;
             this.player.ax = 0;
             this.player.ay = Constants.Gravity;
   
-            // console.log( `    After = ${ JSON.stringify( this.player ) }` );
+            // log( `    After = ${ JSON.stringify( this.player ) }` );
   
             currentLine = null;
           }
@@ -194,11 +204,11 @@ export class World {
         }
   
         // See when we'd hit another line
-        this.#lines.forEach( ( line, index ) => {
+        this.#lines.forEach( line => {
           if ( currentLine != line ) {
-            const time = line.timeToHit_accel( this.player );;
+            const time = line.timeToHit_accel( this.player );
   
-            // console.log( `  Would hit line ${ JSON.stringify( line ) } at ${ time }` );
+            log( `  Would hit line ${ JSON.stringify( line ) } at ${ time }` );
   
             // if ( EPSILON < time && time < nextTime ) {
             if ( 0 < time && time < nextTime ) {
@@ -208,8 +218,8 @@ export class World {
           }
         } );
   
-        if ( 0 < stopTime && stopTime < nextTime ) {
-          // console.log( `  Will stop in ${ stopTime }` );
+        if ( 0 < stopTime && stopTime <= nextTime ) {
+          log( `  Will stop in ${ stopTime }` );
           nextLine = currentLine;
   
           this.player.x += this.player.dx * stopTime + 0.5 * this.player.ax * stopTime ** 2;
@@ -222,7 +232,7 @@ export class World {
             // ctx.fillStyle = 'red';
             // drawPlayer( ctx, this.player );
   
-            // console.log( 'Full stop, breaking' );
+            log( 'Full stop, breaking' );
             if ( !this.readyForInput ) {
               if ( this.#level.goal &&
                    this.#level.goal[ 0 ] < this.player.x && this.player.x < this.#level.goal[ 2 ] &&
@@ -239,12 +249,12 @@ export class World {
           else {
             // ctx.fillStyle = 'yellow';
   
-            // console.log( 'Partial stop, going other direction' );
+            log( 'Partial stop, going other direction' );
             // drawPlayer( ctx, this.player );
           }
         }
         else {
-          // console.log( `  Will hit line ${ JSON.stringify( nextLine) } in ${ nextTime }` );
+          log( `  Will hit line ${ JSON.stringify( nextLine) } in ${ nextTime }` );
   
           this.player.x += this.player.dx * nextTime + 0.5 * this.player.ax * nextTime ** 2;
           this.player.y += this.player.dy * nextTime + 0.5 * this.player.ay * nextTime ** 2;
@@ -255,6 +265,10 @@ export class World {
           // ctx.fillStyle = COLORS[ step % COLORS.length ];
           // drawPlayer( ctx, this.player );
         }
+
+        
+        this.#debug.dt = dt;
+        this.#debug.nextTime = nextTime;
         
         currentLine = nextLine;
         dt -= nextTime;
@@ -289,10 +303,8 @@ export class World {
       ctx.fillStyle = 'white';
       ctx.fill();
 
-      // ctx.font = '0.4px Arial';
-      // JSON.stringify( this.player ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
-      //   ctx.fillText( str, -7, -7 + 0.4 * index );
-      // } );
+      debug( ctx, this.player, -7, -7 );
+      debug( ctx, this.#debug, 2, -7 );
     }
 
     if ( this.#hitDrag ) {
@@ -330,4 +342,17 @@ function fixAngle( a ) {
 
 function deltaAngle( a, b ) {
   return fixAngle( b - a );
+}
+
+function log( str ) {
+  if ( LOGGING ) {
+    console.log( str );
+  }
+}
+
+function debug( ctx, object, x, y ) {
+  ctx.font = '0.4px Arial';
+  JSON.stringify( object ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
+    ctx.fillText( str, x, y + 0.4 * index );
+  } );
 }
