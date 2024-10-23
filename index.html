@@ -1,0 +1,105 @@
+<title>Play Single Level</title>
+<link rel="stylesheet" href="./style.css">
+
+<script type="module">
+  import { Canvas } from './src/Canvas.js';
+  import { World } from './src/World.js';
+  import * as Level from './src/Level.js';
+  import { Line } from './src/Line.js';
+  import { Constants } from './src/Golf.js';
+
+
+  const gameState = {
+    levelFolder: './levels/test',
+    levelIndex: 0,
+  }
+
+  let world;
+
+  const playlistJSON = await ( await fetch( gameState.levelFolder + '/playlist.json' ) ).json()
+  loadLevel();
+
+  
+  const SIZE = 16;
+  const canvas = new Canvas();
+  canvas.zoom = 1 / SIZE;
+  canvas.scrollX = SIZE / 2;
+  canvas.scrollY = SIZE / 2;
+  
+  canvas.update = ( dt ) => {
+    if ( world ) {
+      world.update( dt );
+    }
+  }
+
+  canvas.draw = ( ctx ) => {
+    if ( world ) {
+      world.draw( ctx );
+      
+      // TODO: Move to world?
+      ctx.fillStyle = 'white';
+      ctx.font = '1px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText( world.strokes, 0, -SIZE / 2 );
+      
+      if ( world.victory ) {
+        ctx.font = '2px Arial';
+        ctx.textBaseline = 'middle';
+        ctx.fillText( 'Victory!', 0, 0 );
+      }
+    }
+  }
+
+  canvas.start();
+
+  function nextLevel() {
+    gameState.levelIndex = Math.min( playlistJSON.levels.length - 1, gameState.levelIndex + 1 );
+    loadLevel();
+  }
+
+  function previousLevel() {
+    gameState.levelIndex = Math.max( 0, gameState.levelIndex - 1 );
+    loadLevel();
+  }
+
+  async function loadLevel() {
+    const path = gameState.levelFolder + '/' + playlistJSON.levels[ gameState.levelIndex ];
+    const levelJSON = await ( await fetch( path ) ).json();
+    world = new World( levelJSON );
+  }
+  
+  canvas.canvas.addEventListener( 'pointerdown', e => {
+    if ( world ) {
+      if ( world.victory ) {
+        nextLevel();
+      }
+      else {
+        world.startHitDrag( canvas.getPointerX( e ), canvas.getPointerY( e ) );
+      }
+    }
+  } );
+
+  canvas.canvas.addEventListener( 'pointermove', e => {
+    if ( world ) {
+      world.moveHitDrag( canvas.getPointerX( e ), canvas.getPointerY( e ) );
+    }
+  } );
+
+  canvas.canvas.addEventListener( 'pointerup', e => {
+    if ( world ) {
+      world.stopHitDrag();
+    }
+  } );
+
+  const keyActions = {
+    'n': nextLevel,
+    'p': previousLevel,
+  };
+
+  document.addEventListener( 'keydown', e => {
+    const func = keyActions[ e.key ];
+    if ( func ) func();
+  })
+
+</script>

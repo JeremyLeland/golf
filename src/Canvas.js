@@ -44,7 +44,7 @@ export class Canvas {
         this.#offsetX = ( inlineSize - this.#scale );// / devicePixelRatio;
         this.#offsetY = ( blockSize - this.#scale );// / devicePixelRatio;
 
-        console.log( 'offsetX = ' + this.#offsetX + ', offsetY = ' + this.#offsetY );
+        // console.log( 'offsetX = ' + this.#offsetX + ', offsetY = ' + this.#offsetY );
       } );
       
       this.redraw();

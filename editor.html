@@ -350,7 +350,12 @@
       canvas.redraw();
     }
     else if ( mode == Mode.Play ) {
-      world.startHitDrag( mouse.x, mouse.y );
+      if ( world.victory ) {
+        world = new World( editorState.level );
+      }
+      else {
+        world.startHitDrag( mouse.x, mouse.y );
+      }
     }
   } );
 

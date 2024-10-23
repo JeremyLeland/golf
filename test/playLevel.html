@@ -42,8 +42,8 @@
     }
   }
 
-
-  let world = new World( await ( await fetch( '../levels/test3.json' ) ).json() )
+  const levelJSON = await ( await fetch( '../levels/test/test4.json' ) ).json()
+  let world = new World( levelJSON );
 
   const SIZE = 16;
   const canvas = new Canvas();
@@ -87,7 +87,13 @@
   
   canvas.canvas.addEventListener( 'pointerdown', e => {
     updateMousePos( e );
-    world.startHitDrag( mouse.x, mouse.y );
+
+    if ( world.victory ) {
+      world = new World( levelJSON );
+    }
+    else {
+      world.startHitDrag( mouse.x, mouse.y );
+    }
   } );
 
   canvas.canvas.addEventListener( 'pointermove', e => {
