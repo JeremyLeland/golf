@@ -154,9 +154,11 @@ export class World {
             this.player.ax = a * lineSlopeX;
             this.player.ay = a * lineSlopeY;
   
-            // TODO: Is this sometimes preventing us from stopping when going left?
-            // this.player.dx = dir * playerSpeed * lineSlopeX;
-            // this.player.dy = dir * playerSpeed * lineSlopeY;
+            // // Is this sometimes preventing us from stopping when going left?
+            // if ( playerSpeed > Constants.MinBounceSpeed ) {   // TODO: Some other threshold?
+            //   this.player.dx = dir * playerSpeed * lineSlopeX;
+            //   this.player.dy = dir * playerSpeed * lineSlopeY;
+            // }
   
             // See when we'd stop rolling from friction
             stopTime = dir * playerSpeed / -a;

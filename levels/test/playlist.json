@@ -4,6 +4,7 @@
   "description": "A bunch of levels to test stuff with",
   "levels": [
     "test4.json",
+    "test5.json",
     "test3.json",
     "test1.json"
   ]
