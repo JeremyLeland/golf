@@ -51,13 +51,6 @@
   canvas.scrollX = SIZE / 2;
   canvas.scrollY = SIZE / 2;
   
-  let dragStart;
-
-  const pullGrad = canvas.ctx.createRadialGradient( 0, 0, 0, 0, 0, 2 );
-  pullGrad.addColorStop( 0, 'green' );
-  pullGrad.addColorStop( 0.5, 'yellow' );
-  pullGrad.addColorStop( 1, 'red' );
-
   canvas.update = ( dt ) => {
     world.update( dt );
   }
@@ -65,26 +58,7 @@
   canvas.draw = ( ctx ) => {
     world.draw( ctx );
 
-    if ( dragStart ) {
-      const cx = dragStart.x - mouse.x;
-      const cy = dragStart.y - mouse.y;
-      const angle = Math.atan2( cy, cx );
-      const dist = Math.hypot( cx, cy );
-
-      const offX =  Math.sin( angle ) * world.player.radius;
-      const offY = -Math.cos( angle ) * world.player.radius;
-
-      ctx.translate( world.player.x, world.player.y );
-      ctx.beginPath();
-      ctx.lineTo( offX, offY );
-      ctx.lineTo( -offX, -offY );
-      ctx.lineTo( -Math.cos( angle ) * dist, -Math.sin( angle ) * dist );
-
-      ctx.fillStyle = pullGrad;
-      ctx.fill();
-      ctx.translate( -world.player.x, -world.player.y );
-    }
-
+    // TODO: Move to world?
     ctx.fillStyle = 'white';
     ctx.font = '1px Arial';
     ctx.textAlign = 'center';
@@ -112,36 +86,17 @@
 
   
   canvas.canvas.addEventListener( 'pointerdown', e => {
-    if ( world.readyForInput ) {
-      updateMousePos( e );
-      
-      dragStart ??= {
-        x: mouse.x,
-        y: mouse.y
-      };
-    }
+    updateMousePos( e );
+    world.startHitDrag( mouse.x, mouse.y );
   } );
 
   canvas.canvas.addEventListener( 'pointermove', e => {
     updateMousePos( e );
+    world.moveHitDrag( mouse.x, mouse.y );
   } );
 
   canvas.canvas.addEventListener( 'pointerup', e => {
-    if ( dragStart ) {
-      const SENSITIVITY = 0.01;
-      
-      const cx = dragStart.x - mouse.x;
-      const cy = dragStart.y - mouse.y;
-      const angle = Math.atan2( cy, cx );
-      const dist = Math.hypot( cx, cy );
-      
-      world.hitBall(
-        SENSITIVITY * dist * Math.cos( angle ),
-        SENSITIVITY * dist * Math.sin( angle )
-      );
-      
-      dragStart = null;
-    }
+    world.stopHitDrag();
   } );
 
 </script>

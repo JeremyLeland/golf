@@ -3,10 +3,7 @@ import { Constants } from './Golf.js';
 
 const EPSILON = 1e-6;
 
-
-// TODO: Don't roll across large angle changes, bounce off instead
-// TODO: Only count as hit if we are facing normal (not coming from behind)
-
+let pullGrad;
 
 export class World {
   player;
@@ -18,6 +15,8 @@ export class World {
   #level;
 
   #lines;
+
+  #hitDrag;
 
 
   constructor( level ) {
@@ -47,11 +46,35 @@ export class World {
     };
   }
 
-  hitBall( dx, dy ) {
-    this.player.dx = dx;
-    this.player.dy = dy;
-    this.readyForInput = false;
-    this.strokes ++;
+  startHitDrag( x, y ) {
+    if ( this.readyForInput && !this.#hitDrag ) {
+      this.#hitDrag = [ x, y, x, y ];
+    }
+  }
+
+  moveHitDrag( x, y ) {
+    if ( this.readyForInput && this.#hitDrag ) {
+      this.#hitDrag[ 2 ] = x;
+      this.#hitDrag[ 3 ] = y;
+    }
+  }
+
+  stopHitDrag() {
+    if ( this.readyForInput && this.#hitDrag ) {
+      const SENSITIVITY = 0.01;
+      
+      const cx = this.#hitDrag[ 0 ] - this.#hitDrag[ 2 ];
+      const cy = this.#hitDrag[ 1 ] - this.#hitDrag[ 3 ];
+      const angle = Math.atan2( cy, cx );
+      const dist = Math.min( Constants.Player.MaxHit, Math.hypot( cx, cy ) );
+      
+      this.player.dx = SENSITIVITY * dist * Math.cos( angle );
+      this.player.dy = SENSITIVITY * dist * Math.sin( angle );
+      this.readyForInput = false;
+      this.strokes ++;
+      
+      this.#hitDrag = null;
+    }
   }
 
   update( dt ) {
@@ -270,6 +293,33 @@ export class World {
       // JSON.stringify( this.player ).replace( /[\{\}]/gi,'').split( ',' ).forEach( ( str, index ) => {
       //   ctx.fillText( str, -7, -7 + 0.4 * index );
       // } );
+    }
+
+    if ( this.#hitDrag ) {
+      const cx = this.#hitDrag[ 0 ] - this.#hitDrag[ 2 ];
+      const cy = this.#hitDrag[ 1 ] - this.#hitDrag[ 3 ];
+      const angle = Math.atan2( cy, cx );
+      const dist = Math.min( Constants.Player.MaxHit, Math.hypot( cx, cy ) );
+
+      const offX =  Math.sin( angle ) * this.player.radius;
+      const offY = -Math.cos( angle ) * this.player.radius;
+
+      ctx.translate( this.player.x, this.player.y );
+      ctx.beginPath();
+      ctx.lineTo( offX, offY );
+      ctx.lineTo( -offX, -offY );
+      ctx.lineTo( -Math.cos( angle ) * dist, -Math.sin( angle ) * dist );
+
+      if ( pullGrad == null ) {
+        pullGrad = ctx.createRadialGradient( 0, 0, 0, 0, 0, 2 );
+        pullGrad.addColorStop( 0, 'green' );
+        pullGrad.addColorStop( 0.5, 'yellow' );
+        pullGrad.addColorStop( 1, 'red' );
+      }
+
+      ctx.fillStyle = pullGrad;
+      ctx.fill();
+      ctx.translate( -this.player.x, -this.player.y );
     }
   }
 }

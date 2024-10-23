@@ -79,11 +79,6 @@
     world.update( dt );
   }
 
-  const pullGrad = canvas.ctx.createRadialGradient( 0, 0, 0, 0, 0, 2 );
-  pullGrad.addColorStop( 0, 'green' );
-  pullGrad.addColorStop( 0.5, 'yellow' );
-  pullGrad.addColorStop( 1, 'red' );
-
   canvas.draw = ( ctx ) => {
 
     ctx.font = '0.25px Arial';
@@ -181,26 +176,7 @@
     else if ( mode == Mode.Play ) {
       world.draw( ctx );
 
-      if ( dragStart ) {
-        const cx = dragStart.x - mouse.x;
-        const cy = dragStart.y - mouse.y;
-        const angle = Math.atan2( cy, cx );
-        const dist = Math.min( Constants.Player.MaxHit, Math.hypot( cx, cy ) );
-
-        const offX =  Math.sin( angle ) * world.player.radius;
-        const offY = -Math.cos( angle ) * world.player.radius;
-
-        ctx.translate( world.player.x, world.player.y );
-        ctx.beginPath();
-        ctx.lineTo( offX, offY );
-        ctx.lineTo( -offX, -offY );
-        ctx.lineTo( -Math.cos( angle ) * dist, -Math.sin( angle ) * dist );
-
-        ctx.fillStyle = pullGrad;
-        ctx.fill();
-        ctx.translate( -world.player.x, -world.player.y );
-      }
-
+      // TODO: Move this to World as well? (need to pass in screen bounds?)
       ctx.fillStyle = 'white';
       ctx.font = '1px Arial';
       ctx.textAlign = 'center';
@@ -374,14 +350,7 @@
       canvas.redraw();
     }
     else if ( mode == Mode.Play ) {
-      if ( world.readyForInput ) {
-        updateMousePos( e );
-        
-        dragStart ??= {
-          x: mouse.x,
-          y: mouse.y
-        };
-      }
+      world.startHitDrag( mouse.x, mouse.y );
     }
   } );
 
@@ -414,6 +383,7 @@
       canvas.redraw();
     }
     else if ( mode == Mode.Play ) {
+      world.moveHitDrag( mouse.x, mouse.y );
     }
   } );
 
@@ -441,21 +411,7 @@
       canvas.redraw();
     }
     else if ( mode == Mode.Play ) {
-      if ( dragStart ) {
-        const SENSITIVITY = 0.01;
-        
-        const cx = dragStart.x - mouse.x;
-        const cy = dragStart.y - mouse.y;
-        const angle = Math.atan2( cy, cx );
-        const dist = Math.min( Constants.Player.MaxHit, Math.hypot( cx, cy ) );
-        
-        world.hitBall(
-          SENSITIVITY * dist * Math.cos( angle ),
-          SENSITIVITY * dist * Math.sin( angle )
-        );
-        
-        dragStart = null;
-      }
+      world.stopHitDrag();
     }
   } );
 
