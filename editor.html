@@ -465,6 +465,7 @@
       dx: mouse.x - ( editorState.level.goal[ 0 ] + editorState.level.goal[ 2 ] ) / 2,
       dy: mouse.y - ( editorState.level.goal[ 1 ] + editorState.level.goal[ 3 ] ) / 2,
     } ),
+    'r': () => world = new World( editorState.level )
   }
 
   document.addEventListener( 'keydown', e => {

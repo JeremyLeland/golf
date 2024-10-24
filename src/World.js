@@ -2,7 +2,7 @@ import { Line } from './Line.js';
 import { Constants } from './Golf.js';
 
 const EPSILON = 1e-6;
-const LOGGING = false;
+const LOGGING = true;
 
 let pullGrad;
 
@@ -80,6 +80,7 @@ export class World {
   }
 
   update( dt ) {
+    log( '\n=== Update( ' + dt + ' ) === ');
 
     // 0. See if we are already colliding with something
     //    - If so, back out of it, and this is our current line
@@ -112,28 +113,37 @@ export class World {
 
         const proj = this.player.dx * normX + this.player.dy * normY;
 
-        log( 'proj = ' + proj );
+        // log( 'proj = ' + proj );
 
         if ( proj <= 0 ) { 
-          this.player.x -= Math.cos( normalAngle ) * currentDist;
-          this.player.y -= Math.sin( normalAngle ) * currentDist;
+          this.player.x -= normX * currentDist;
+          this.player.y -= normY * currentDist;
         }
         else {
           currentLine = null;
         }
       }
 
+      let stopped = false;
+
       for ( let step = 0; step < 5; step ++ ) {
-        let nextTime = dt, nextLine = null;
+        log( 'Step ' + step + ', dt = ' + dt );
+
+        let nextLineTime = Infinity, nextLine = null;
         let stopTime = Infinity, willFullStop = false;
 
         if ( currentLine ) {
           const slopeAngle = currentLine.slopeAngle;
           const lineSlopeX = Math.cos( slopeAngle );
           const lineSlopeY = Math.sin( slopeAngle );
-  
+
           const playerAngle = Math.atan2( this.player.dy, this.player.dx );
           const playerSpeed = Math.hypot( this.player.dx, this.player.dy );
+          
+          log( `  Current line is ${ JSON.stringify( currentLine ) } ` );
+          log( `  Slope angle is  ${ slopeAngle }` );
+          log( `  Player angle is ${ playerAngle }` );
+          log( `  Player speed is ${ playerSpeed }, MinBounceSpeed = ${ Constants.MinBounceSpeed }` );
 
           this.#debug.playerSpeed = playerSpeed;
   
@@ -143,7 +153,7 @@ export class World {
                Math.abs( deltaAngle( playerAngle, slopeAngle + Math.PI ) ) < Constants.RollAngle ) {  
             log( '  Rolling' );
   
-            const dir = this.player.dx < 0 ? -1 : 1 ;
+            const dir = this.player.dx < 0 ? -1 : 1;
             
             const gravTerm = lineSlopeY;
             const fricTerm = dir * Constants.RollFriction * lineSlopeX;
@@ -154,6 +164,8 @@ export class World {
             this.player.ax = a * lineSlopeX;
             this.player.ay = a * lineSlopeY;
   
+            // Do we need to match slope with current line? 
+            // Might be messing up our slow-downs (I don't see where else dx/dy are altered)
             // // Is this sometimes preventing us from stopping when going left?
             // if ( playerSpeed > Constants.MinBounceSpeed ) {   // TODO: Some other threshold?
             //   this.player.dx = dir * playerSpeed * lineSlopeX;
@@ -164,16 +176,16 @@ export class World {
             stopTime = dir * playerSpeed / -a;
             willFullStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
 
-            this.#debug.stopTime = stopTime;
-            this.#debug.willFullStop = willFullStop;
-            
-            if ( stopTime == 0 && willFullStop ) {
-              log( 'Already fully stopped, breaking' );
-              break;
+            if ( stopTime < 0 ) {
+              stopTime = Infinity;
+              debugger;
             }
-
-            log( '    stopTime = ' + stopTime );
-            log( '    willFullStop = ' + willFullStop );
+            
+            // if ( stopTime == 0 && willFullStop ) {
+            //   log( 'Already fully stopped, breaking' );
+            //   stopped = true;
+            //   break;
+            // }
           }
   
           // Bounce
@@ -201,6 +213,7 @@ export class World {
           
         }
         else {
+          log( '  No current line, falling with gravity' );
           this.player.ax = 0;
           this.player.ay = Constants.Gravity;
         }
@@ -210,73 +223,70 @@ export class World {
           if ( currentLine != line ) {
             const time = line.timeToHit_accel( this.player );
   
-            log( `  Would hit line ${ JSON.stringify( line ) } at ${ time }` );
+            // log( `  Would hit line ${ JSON.stringify( line ) } at ${ time }` );
   
             // if ( EPSILON < time && time < nextTime ) {
-            if ( 0 < time && time < nextTime ) {
+            if ( 0 < time && time < nextLineTime ) {
               nextLine = line;
-              nextTime = time;
+              nextLineTime = time;
             }
           }
         } );
-  
-        if ( 0 < stopTime && stopTime <= nextTime ) {
-          log( `  Will stop in ${ stopTime }` );
-          nextLine = currentLine;
-  
-          this.player.x += this.player.dx * stopTime + 0.5 * this.player.ax * stopTime ** 2;
-          this.player.y += this.player.dy * stopTime + 0.5 * this.player.ay * stopTime ** 2;
-  
-          this.player.dx = 0;
-          this.player.dy = 0;
-  
-          if ( willFullStop ) {
-            // ctx.fillStyle = 'red';
-            // drawPlayer( ctx, this.player );
-  
-            log( 'Full stop, breaking' );
-            if ( !this.readyForInput ) {
-              if ( this.#level.goal &&
-                   this.#level.goal[ 0 ] < this.player.x && this.player.x < this.#level.goal[ 2 ] &&
-                   this.#level.goal[ 1 ] < this.player.y && this.player.y < this.#level.goal[ 3 ] ) {
-                this.victory = true;
-              }
-              else {
-                this.readyForInput = true;
-              }
-            }
 
+        log( `  Would roll to stop at ${ stopTime }, full stop = ${ willFullStop }` );
+        log( `  Would hit line ${ JSON.stringify( nextLine ) } at ${ nextLineTime }` );
+
+        this.#debug.stopTime = stopTime;
+        this.#debug.willFullStop = willFullStop;
+        this.#debug.nextLine = JSON.stringify( nextLine );
+        this.#debug.nextLineTime = nextLineTime;
+
+        const nextTime = Math.min( stopTime, nextLineTime, dt );
+
+        log( `    Before = ${ JSON.stringify( this.player ) }` );
+
+        this.player.x += this.player.dx * nextTime + 0.5 * this.player.ax * nextTime ** 2;
+        this.player.y += this.player.dy * nextTime + 0.5 * this.player.ay * nextTime ** 2;
+
+        this.player.dx += this.player.ax * nextTime;
+        this.player.dy += this.player.ay * nextTime;
+
+        dt -= nextTime;
+
+        log( `    After = ${ JSON.stringify( this.player ) }` );
+
+        if ( nextTime == stopTime ) {
+          log( `  Stopped at ${ nextTime }` );
+
+          if ( willFullStop ) {
+            log( `  Full stop, ending update loop` );
+            stopped = true;
             break;
           }
           else {
-            // ctx.fillStyle = 'yellow';
-  
-            log( 'Partial stop, going other direction' );
-            // drawPlayer( ctx, this.player );
+            log( ` Partial stop, will now go other direction` );
           }
         }
-        else {
-          log( `  Will hit line ${ JSON.stringify( nextLine) } in ${ nextTime }` );
-  
-          this.player.x += this.player.dx * nextTime + 0.5 * this.player.ax * nextTime ** 2;
-          this.player.y += this.player.dy * nextTime + 0.5 * this.player.ay * nextTime ** 2;
-  
-          this.player.dx += this.player.ax * nextTime;
-          this.player.dy += this.player.ay * nextTime;
-  
-          // ctx.fillStyle = COLORS[ step % COLORS.length ];
-          // drawPlayer( ctx, this.player );
+        else if ( nextTime == nextLineTime ) {
+          log( `  Hit line at ${ nextTime }` );
+          currentLine = nextLine;
         }
-
-        
-        this.#debug.dt = dt;
-        this.#debug.nextTime = nextTime;
-        
-        currentLine = nextLine;
-        dt -= nextTime;
-  
-        if ( dt <= 0 ) {
+        else {
+          log( `  Finished update to ${ nextTime }, ending update loop` );
           break;
+        }
+      }
+
+      if ( stopped ) {
+        if ( !this.readyForInput ) {
+          if ( this.#level.goal &&
+               this.#level.goal[ 0 ] < this.player.x && this.player.x < this.#level.goal[ 2 ] &&
+               this.#level.goal[ 1 ] < this.player.y && this.player.y < this.#level.goal[ 3 ] ) {
+            this.victory = true;
+          }
+          else {
+            this.readyForInput = true;
+          }
         }
       }
 

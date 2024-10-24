@@ -150,6 +150,7 @@ export class Line {
     const normY = Math.sin( normalAngle );
 
     // Skip if we are coming from behind the line (to hopefully avoid issues with corners)
+    // TODO: Why is this breaking so many things?
     const proj = entity.dx * normX + entity.dy * normY;
     if ( proj >= 0 ) {
       return Infinity;
