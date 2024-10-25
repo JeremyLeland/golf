@@ -171,42 +171,27 @@ export class World {
             this.player.ax = a * lineSlopeX;
             this.player.ay = a * lineSlopeY;
   
-            // Do we need to match slope with current line? 
-            // Might be messing up our slow-downs (I don't see where else dx/dy are altered)
-            // // Is this sometimes preventing us from stopping when going left?
-            // if ( playerSpeed > Constants.MinBounceSpeed ) {   // TODO: Some other threshold?
-              this.player.dx = dir * playerSpeed * lineSlopeX;
-              this.player.dy = dir * playerSpeed * lineSlopeY;
-            // }
+            this.player.dx = dir * playerSpeed * lineSlopeX;
+            this.player.dy = dir * playerSpeed * lineSlopeY;
 
             log( `playerSpeed expected: ${ playerSpeed }, actual ${ Math.hypot( this.player.dx, this.player.dy ) }` );
             log( `playerAngle after correction = ${ Math.atan2( this.player.dy, this.player.dx ) }` );
 
-            //
-            // NOTES
-            //
-            // While we're rolling in the editor demo, the stopTime is not decreasing by the amount expected
-            // If stopTime is 25 and we update 15, then stopTime should be 10. But it'll still be like 21.
-            // 
-            // Does this mean playerSpeed is not decreasing as much as it should when we update? (dir and a shouldn't change)
-  
             // See when we'd stop rolling from friction
-            stopTime = dir * playerSpeed / -a;
-
-            log( `dir = ${ dir }, playerSpeed = ${ playerSpeed }, a = ${ a }` );
-
             willFullStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
 
-            if ( stopTime < 0 ) {
-              stopTime = Infinity;
-              debugger;
+            if ( playerSpeed > 0 ) {
+              stopTime = dir * playerSpeed / -a;
+              log( `dir = ${ dir }, playerSpeed = ${ playerSpeed }, a = ${ a }` );
+
+              if ( stopTime < 0 ) {
+                stopTime = Infinity;
+              }
             }
-            
-            // if ( stopTime == 0 && willFullStop ) {
-            //   log( 'Already fully stopped, breaking' );
-            //   stopped = true;
-            //   break;
-            // }
+            else if ( willFullStop ) {
+              log( 'Already fully stopped' );
+              stopTime = 0;
+            }
           }
   
           // Bounce
