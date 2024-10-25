@@ -8,5 +8,5 @@ export const Constants = {
   RollFriction: 0.8,
   BounceFriction: 0.05,
   BounceDamping: 0.7,
-  MinBounceSpeed: 5e-4,
+  MinBounceSpeed: 0.001,
 }

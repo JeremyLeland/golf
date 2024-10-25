@@ -2,7 +2,7 @@ import { Line } from './Line.js';
 import { Constants } from './Golf.js';
 
 const EPSILON = 1e-6;
-const LOGGING = true;
+const LOGGING = false;
 
 let pullGrad;
 
@@ -92,11 +92,15 @@ export class World {
     // 4. Back to step 1
     
     if ( this.player ) {
-      let currentLine = null, currentDist = EPSILON;  // currentDist start value is "snap" distance
+
+      log( `playerAngle at beginning of update = ${ Math.atan2( this.player.dy, this.player.dx ) }` );
+
+      let currentLine = null, currentDist = 0.01;  // currentDist start value is "snap" distance
       this.#lines.forEach( line => {
         const dist = line.distanceFrom( this.player );
-        
+
         if ( -this.player.radius < dist && dist < currentDist ) {
+          log( `  Distance from line ${ JSON.stringify( line ) } is ${ dist }` );
           currentLine = line;
           currentDist = dist;
         }
@@ -113,9 +117,9 @@ export class World {
 
         const proj = this.player.dx * normX + this.player.dy * normY;
 
-        // log( 'proj = ' + proj );
+        log( 'proj = ' + proj );
 
-        if ( proj <= 0 ) { 
+        if ( proj <= EPSILON ) { 
           this.player.x -= normX * currentDist;
           this.player.y -= normY * currentDist;
         }
@@ -147,6 +151,9 @@ export class World {
 
           this.#debug.playerSpeed = playerSpeed;
   
+          // TODO: Maybe player speed isn't the issue here
+          // Maybe we're no longer detecting as rolling, and so we fall, which changes angle and throws off stopping time?
+
           // Roll
           if ( playerSpeed < Constants.MinBounceSpeed ||
                Math.abs( deltaAngle( slopeAngle, playerAngle ) )           < Constants.RollAngle ||
@@ -168,12 +175,26 @@ export class World {
             // Might be messing up our slow-downs (I don't see where else dx/dy are altered)
             // // Is this sometimes preventing us from stopping when going left?
             // if ( playerSpeed > Constants.MinBounceSpeed ) {   // TODO: Some other threshold?
-            //   this.player.dx = dir * playerSpeed * lineSlopeX;
-            //   this.player.dy = dir * playerSpeed * lineSlopeY;
+              this.player.dx = dir * playerSpeed * lineSlopeX;
+              this.player.dy = dir * playerSpeed * lineSlopeY;
             // }
+
+            log( `playerSpeed expected: ${ playerSpeed }, actual ${ Math.hypot( this.player.dx, this.player.dy ) }` );
+            log( `playerAngle after correction = ${ Math.atan2( this.player.dy, this.player.dx ) }` );
+
+            //
+            // NOTES
+            //
+            // While we're rolling in the editor demo, the stopTime is not decreasing by the amount expected
+            // If stopTime is 25 and we update 15, then stopTime should be 10. But it'll still be like 21.
+            // 
+            // Does this mean playerSpeed is not decreasing as much as it should when we update? (dir and a shouldn't change)
   
             // See when we'd stop rolling from friction
             stopTime = dir * playerSpeed / -a;
+
+            log( `dir = ${ dir }, playerSpeed = ${ playerSpeed }, a = ${ a }` );
+
             willFullStop = Math.abs( lineSlopeY ) < Math.abs( Constants.RollFriction * lineSlopeX );
 
             if ( stopTime < 0 ) {
@@ -250,6 +271,8 @@ export class World {
 
         this.player.dx += this.player.ax * nextTime;
         this.player.dy += this.player.ay * nextTime;
+
+        log( `playerAngle after move = ${ Math.atan2( this.player.dy, this.player.dx ) }` );
 
         dt -= nextTime;
 
