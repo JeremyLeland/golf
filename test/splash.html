@@ -1,0 +1,45 @@
+<title>Splash test</title>
+<link rel="stylesheet" href="../style.css">
+
+<style>
+  #splash {
+    display: grid;
+    justify-items: center;
+    height: 100vh;
+  }
+  #title {
+    font-size: 40vh;
+    font-weight: bold;
+    margin: 1vh;
+  }
+  #buttons {
+    display: grid;
+    margin: 1vh;
+  }
+  button {
+    padding: 2vh;
+    margin: 1vh;
+    font-size: 4vh;
+    width: 30vw;
+  }
+  #copyright {
+    display: flex;
+    align-items: flex-end;
+    font-size: 2vh;
+  }
+</style>
+
+<div id="splash">
+  <span id="title">Golf</span>
+  <div id="buttons">
+    <button id="continue">Continue</button>
+    <button id="new">New Game</button>
+  </div>
+  <div id="copyright">(c) 2024 Jeremy Leland &nbsp; <a href="https://github.com/JeremyLeland/golf">GitHub</a></div>
+</div>
+
+<script type="module">
+  import { Canvas } from '../src/Canvas.js';
+  import { Constants } from '../src/Golf.js'; 
+
+</script>
