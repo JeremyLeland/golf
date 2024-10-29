@@ -173,7 +173,10 @@
     }
     else {
       console.log( 'Attempting to load out-of-bounds level, game complete' );
+
+      gameState = null;
       localStorage.removeItem( GameStateKey );
+      
       showSplash();
     }
   }
