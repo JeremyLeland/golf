@@ -1,5 +1,50 @@
-<title>Play Single Level</title>
+<title>Golf</title>
 <link rel="stylesheet" href="./style.css">
+
+<style>
+  #splash {
+    display: grid;
+    justify-items: center;
+    height: 100vh;
+  }
+  #title {
+    font-size: 40vh;
+    font-weight: bold;
+    margin: 1vh;
+  }
+  #buttons {
+    display: grid;
+    margin: 1vh;
+  }
+  button {
+    padding: 2vh;
+    margin: 1vh;
+    font-size: 4vh;
+    width: 30vh;
+  }
+  #copyright {
+    display: flex;
+    align-items: flex-end;
+    font-size: 2vh;
+  }
+
+  canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+</style>
+
+<div id="splash">
+  <span id="title">Golf</span>
+  <div id="buttons">
+    <button id="continue" disabled>Continue</button>
+    <button id="new">New Game</button>
+  </div>
+  <div id="copyright">(c) 2024 Jeremy Leland &nbsp; <a href="https://github.com/JeremyLeland/golf">GitHub</a></div>
+</div>
+
+<canvas id="canvas" style="visibility: hidden"></canvas>
 
 <script type="module">
   import { Canvas } from './src/Canvas.js';
@@ -8,42 +53,34 @@
   import { Line } from './src/Line.js';
   import { Constants } from './src/Golf.js';
 
+  const GameStateKey = 'golfGameState';
 
-  const gameState = {
-    levelFolder: './levels/test',
-    levelIndex: 0,
-  }
-
-  let world;
-
-  const playlistJSON = await ( await fetch( gameState.levelFolder + '/playlist.json' ) ).json()
-  loadLevel();
-
+  let gameState;
   
   const SIZE = 16;
-  const canvas = new Canvas();
+  const canvas = new Canvas( document.getElementById( 'canvas' ) );
   canvas.zoom = 1 / SIZE;
   canvas.scrollX = SIZE / 2;
   canvas.scrollY = SIZE / 2;
   
   canvas.update = ( dt ) => {
-    if ( world ) {
-      world.update( dt );
+    if ( gameState ) {
+      gameState.world.update( dt );
     }
   }
 
   canvas.draw = ( ctx ) => {
-    if ( world ) {
-      world.draw( ctx );
+    if ( gameState ) { 
+      gameState.world.draw( ctx );
       
       // TODO: Move to world?
       ctx.fillStyle = 'white';
       ctx.font = '1px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.fillText( world.strokes, 0, -SIZE / 2 );
+      ctx.fillText( gameState.world.strokes, 0, -SIZE / 2 );
       
-      if ( world.victory ) {
+      if ( gameState.world.victory ) {
         ctx.font = '2px Arial';
         ctx.textBaseline = 'middle';
         ctx.fillText( 'Victory!', 0, 0 );
@@ -51,55 +88,135 @@
     }
   }
 
-  canvas.start();
+  const splashUI = document.getElementById( 'splash' );
+  const continueButton = document.getElementById( 'continue' );
+  const newButton = document.getElementById( 'new' );
+  
+  continueButton.addEventListener( 'click', continueGame );
+  newButton.addEventListener( 'click', newGame );
+  
+  function showSplash() {
+    canvas.stop();
+    canvas.canvas.style.visibility = 'hidden';
+
+    splashUI.style.visibility = 'visible';
+
+    if ( localStorage.getItem( GameStateKey ) ) {
+      continueButton.disabled = false;
+      continueButton.focus();
+    }
+    else {
+      continueButton.disabled = true;
+      newButton.focus();
+    }
+  }
+
+  function showGame() {
+    splashUI.style.visibility = 'hidden';
+    canvas.canvas.style.visibility = 'visible';
+  }
+
+  showSplash();
+
+  async function continueGame() {
+    gameState = JSON.parse( localStorage.getItem( GameStateKey ) );
+    loadLevel( gameState.world );
+  }
+
+  async function newGame() {
+    gameState = {
+      levelFolder: './levels/test',
+      levelIndex: 0,
+      world: {},
+    };
+
+    loadLevel();
+  }
 
   function nextLevel() {
-    gameState.levelIndex = Math.min( playlistJSON.levels.length - 1, gameState.levelIndex + 1 );
+    gameState.world = {}
+    gameState.levelIndex = gameState.levelIndex + 1;
     loadLevel();
   }
 
   function previousLevel() {
+    gameState.world = {}
     gameState.levelIndex = Math.max( 0, gameState.levelIndex - 1 );
     loadLevel();
   }
 
-  async function loadLevel() {
-    const path = gameState.levelFolder + '/' + playlistJSON.levels[ gameState.levelIndex ];
-    const levelJSON = await ( await fetch( path ) ).json();
-    world = new World( levelJSON );
+  function save() {
+    if ( gameState ) {
+      localStorage.setItem( GameStateKey, JSON.stringify( gameState ) );
+    }
+  }
+
+  function exit() {
+    save();
+    showSplash();
+  }
+
+  async function loadLevel( worldState ) {
+    canvas.stop();
+
+    const playlistJSON = await ( await fetch( gameState.levelFolder + '/playlist.json' ) ).json();
+
+    if ( gameState.levelIndex < playlistJSON.levels.length ) {
+      const path = gameState.levelFolder + '/' + playlistJSON.levels[ gameState.levelIndex ];
+      const levelJSON = await ( await fetch( path ) ).json();
+
+      gameState.world = Object.assign( new World( levelJSON ), worldState );
+      save();
+
+      canvas.start();
+      showGame();
+    }
+    else {
+      console.log( 'Attempting to load out-of-bounds level, game complete' );
+      localStorage.removeItem( GameStateKey );
+      showSplash();
+    }
   }
   
+  //
+  // Input
+  //
   canvas.canvas.addEventListener( 'pointerdown', e => {
-    if ( world ) {
-      if ( world.victory ) {
+    if ( gameState.world ) {
+      if ( gameState.world.victory ) {
         nextLevel();
       }
       else {
-        world.startHitDrag( canvas.getPointerX( e ), canvas.getPointerY( e ) );
+        gameState.world.startHitDrag( canvas.getPointerX( e ), canvas.getPointerY( e ) );
       }
     }
   } );
 
   canvas.canvas.addEventListener( 'pointermove', e => {
-    if ( world ) {
-      world.moveHitDrag( canvas.getPointerX( e ), canvas.getPointerY( e ) );
+    if ( gameState.world ) {
+      gameState.world.moveHitDrag( canvas.getPointerX( e ), canvas.getPointerY( e ) );
     }
   } );
 
   canvas.canvas.addEventListener( 'pointerup', e => {
-    if ( world ) {
-      world.stopHitDrag();
+    if ( gameState.world ) {
+      gameState.world.stopHitDrag();
     }
   } );
 
   const keyActions = {
     'n': nextLevel,
     'p': previousLevel,
+    'Escape': exit,
   };
 
   document.addEventListener( 'keydown', e => {
     const func = keyActions[ e.key ];
     if ( func ) func();
-  })
+  } );
+
+  window.addEventListener( 'beforeunload', ( e ) => {
+    save();
+  } );
 
 </script>

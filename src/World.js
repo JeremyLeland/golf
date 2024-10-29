@@ -323,8 +323,8 @@ export class World {
       ctx.fillStyle = 'white';
       ctx.fill();
 
-      debug( ctx, this.player, -7, -7 );
-      debug( ctx, this.#debug, 2, -7 );
+      // debug( ctx, this.player, -7, -7 );
+      // debug( ctx, this.#debug, 2, -7 );
     }
 
     if ( this.#hitDrag ) {
